@@ -1,242 +1,262 @@
 # GameLib
 
-通用游戏系统库 - 一个轻量级、模块化的 Lua 游戏开发库。
+通用游戏系统库 —— 基于 **Phaser 4 + TypeScript + Vite** 的轻量级、模块化游戏系统库。
+
+> 本仓库为原 Lua 版(1.x)的完整 TypeScript 重构版(v2.x)。7 个游戏系统模块保持等价 API 与行为,
+> 所有单元测试已从 Lua 移植为 Vitest。旧版 Lua 源码保留在 git 历史中。
 
 ## 特性
 
-- **模块化设计**: 按需加载，零依赖
-- **链式 API**: 流畅的接口设计
-- **完整测试**: 180+ 单元测试覆盖
-- **跨引擎**: 支持 LÖVE2D、Defold 或纯 Lua 环境
+- **模块化设计**:按需导入,零依赖(库本身不依赖 Phaser,纯 TypeScript,可单独复用)
+- **链式 API**:流畅的接口设计
+- **完整测试**:182 个 Vitest 单元测试覆盖(从原 Lua 测试完整移植)
+- **Phaser 4 集成**:内置可运行演示,展示各模块在 Phaser 场景中的用法
 
-## 安装
+## 技术栈
 
-**方式 1**: 直接复制
-
-```bash
-git clone https://github.com/zoidberg-xgd/GameLib.git lib/gamelib
-```
-
-**方式 2**: Git Submodule
-
-```bash
-git submodule add https://github.com/zoidberg-xgd/GameLib.git lib/gamelib
-```
-
-项目结构：
-```
-your_project/
-├── lib/
-│   └── gamelib/
-│       ├── init.lua
-│       ├── resource.lua
-│       ├── ...
-│       └── tests/
-└── main.lua
-```
-
-## 运行测试
-
-```bash
-cd lib/gamelib
-lua test_all.lua
-```
+| 组件 | 版本 |
+|---|---|
+| Phaser | ^4.2.1 |
+| TypeScript | ~5.9 |
+| Vite | ^8 |
+| Vitest | ^4 |
 
 ## 快速开始
 
-```lua
--- 加载整个库
-local GameLib = require("lib.gamelib")
+`bash
+npm install
+# 开发(启动 Phaser 4 演示)
+npm run dev
+# 单元测试
+npm test
+# 类型检查
+npm run typecheck
+# 生产构建
+npm run build
+`
 
--- 或加载单个模块
-local Resource = require("lib.gamelib.resource")
-local ECS = require("lib.gamelib.ecs")
-```
+浏览器打开 http://localhost:5173 查看模块集成演示。
+
+## 项目结构
+
+`text
+GameLib/
+├── index.html            # 入口页面
+├── src/
+│   ├── main.ts           # Phaser 启动入口
+│   ├── demo/
+│   │   └── DemoScene.ts  # 模块集成演示场景
+│   └── gamelib/          # 游戏系统库(引擎无关)
+│       ├── index.ts      # 汇总导出
+│       ├── ecs.ts            # 实体组件系统
+│       ├── resource.ts       # 数值资源系统
+│       ├── stateSprite.ts    # 状态精灵
+│       ├── procShape.ts      # 程序化形状
+│       ├── interactRegion.ts # 交互区域
+│       ├── dialogue.ts       # 对话系统
+│       └── weightedEvent.ts  # 加权事件
+└── tests/                # Vitest 单元测试
+`
+
+## 快速开始
+
+`ts
+import { ECS, Resource } from './src/gamelib';
+
+// ---- ECS ----
+ECS.defineComponent('Position', { x: 0, y: 0 });
+ECS.defineComponent('Velocity', { vx: 0, vy: 0 });
+ECS.defineSystem('Movement', ['Position', 'Velocity'], (entity, dt) => {
+    const pos = entity.get('Position');
+    const vel = entity.get('Velocity');
+    pos.x += vel.vx * dt;
+    pos.y += vel.vy * dt;
+});
+const player = ECS.createEntity()
+    .add('Position', { x: 100, y: 100 })
+    .add('Velocity', { vx: 50, vy: 0 })
+    .tag('player');
+
+// ---- Resource ----
+const hp = new Resource({ id: 'hp', value: 100, max: 100, regen: 1 });
+hp.subtract(30);
+hp.addModifier({ id: 'poison', type: 'decay', value: 5, duration: 10 });
+hp.onThreshold(20, 'below', () => console.log('HP 危险!'));
+hp.update(1 / 60);
+`
 
 ## 模块概览
 
-### Resource - 资源系统
+### ECS —— 实体组件系统
 
-管理游戏中的数值资源（HP、金币、能量等）。
+`ts
+import { ECS } from './src/gamelib/ecs';
 
-```lua
-local Resource = require("lib.gamelib.resource")
+// 定义组件
+ECS.defineComponent('Position', { x: 0, y: 0 });
 
-local hp = Resource.new({
-    id = "hp",
-    value = 100,
-    max = 100,
-    regen = 1,  -- 每秒恢复
-})
+// 定义系统(可带 priority / onAdd / onRemove 回调)
+ECS.defineSystem('Movement', ['Position', 'Velocity'], (entity, dt) => { /* ... */ });
 
-hp:subtract(30)
-hp:addModifier({id = "poison", type = "decay", value = 5, duration = 10})
-hp:onThreshold(20, "below", function() print("HP 危险!") end)
-hp:update(dt)
-```
+// 实体链式 API
+const e = ECS.createEntity().add('Position', { x: 1 }).tag('player');
+ECS.update(dt);
 
-### StateSprite - 状态精灵
+// 查询 / 统计 / 序列化
+ECS.query(['Position']);
+ECS.queryByTag('player');
+ECS.serialize(); ECS.deserialize(data); ECS.reset();
+`
 
-根据条件自动切换精灵状态。
+### Resource —— 资源系统
 
-```lua
-local StateSprite = require("lib.gamelib.state_sprite")
+管理 HP、金币、能量等数值资源;支持 modifier、阈值事件、自动恢复/衰减、派生资源、资源管理器与存档序列化。
 
-local character = StateSprite.new({
-    states = {
-        neutral = {sprite = "neutral.png"},
-        happy = {sprite = "happy.png"},
-        critical = {sprite = "critical.png", priority = 10},
+`ts
+import { Resource, DerivedResource, ResourceManager } from './src/gamelib/resource';
+
+const hp = new Resource({ id: 'hp', value: 100, max: 100, regen: 1 });
+hp.subtract(30);
+hp.addModifier({ id: 'poison', type: 'decay', value: 5, duration: 10 });
+hp.onThreshold(20, 'below', () => console.log('HP 危险!'));
+hp.update(1 / 60);
+
+const total = new DerivedResource({
+    id: 'total',
+    dependencies: { hp, gold: 50 },
+    formula: (deps) => deps.hp + deps.gold,
+});
+`
+
+事件:onChange(old,new) / onMin() / onMax() / onThreshold(value, above|below|equal|cross, cb)。
+
+### StateSprite —— 状态精灵
+
+按条件/手动在状态间切换(带过渡进度与缓动、临时状态)。Lua 版负责 LÖVE 贴图渲染,
+TS 版专注状态机,渲染由上层(如 Phaser)根据 getState() 完成;图像以纹理键字符串管理。
+
+`ts
+import { StateSprite } from './src/gamelib/stateSprite';
+
+const character = new StateSprite({
+    states: {
+        neutral:   { sprite: 'charNeutral' },
+        happy:     { sprite: 'charHappy' },
+        critical:  { sprite: 'charCritical', priority: 10 },
     },
-    conditions = {
-        {state = "critical", when = function(ctx) return ctx.hp < 20 end},
-        {state = "happy", when = function(ctx) return ctx.money > 100 end},
-    },
-})
+    conditions: [
+        { state: 'critical', when: (ctx) => ctx.hp < 20 },
+        { state: 'happy', when: (ctx) => ctx.money > 100 },
+    ],
+});
+character.loadImage('neutral', 'charNeutral');   // 记录纹理键
+character.updateContext({ hp: 15, money: 50 });
+character.update(dt);
+character.getState(); // => 'critical'
+`
 
-character:updateContext({hp = 15, money = 50})
-character:update(dt)
-character:draw(x, y)
-```
+### ProcShape —— 程序化形状
 
-### ProcShape - 程序化形状
+动态变形的椭圆/多边形/贝塞尔形状,支持弹簧-阻尼晃动、参数绑定到 Resource、下垂/凸起/旋转与命中检测。TS 版不渲染,通过 getOutlinePoints() 交给 Phaser Graphics 绘制。
 
-动态变形的形状，支持物理晃动。
+`ts
+import { ProcShape } from './src/gamelib/procShape';
 
-```lua
-local ProcShape = require("lib.gamelib.proc_shape")
+const blob = new ProcShape({
+    type: 'ellipse', baseWidth: 100, baseHeight: 80,
+    physics: { jiggle: true, stiffness: 100, damping: 10 },
+});
+blob.bindParam('scale', hp, (v) => 1 + v / 1000);
+blob.poke(0, 10, 1);   // 触发晃动
+blob.update(dt);
+const pts = blob.getOutlinePoints(); // {x,y}[] 交给 Graphics 绘制
+blob.contains(px, py, cx, cy);       // 命中检测
+`
 
-local shape = ProcShape.new({
-    type = "ellipse",
-    baseWidth = 100,
-    baseHeight = 80,
-    physics = {jiggle = true, stiffness = 100, damping = 10},
-})
+### InteractRegion —— 交互区域
 
-shape:bindParam("scale", volumeResource, function(v) return 1 + v/1000 end)
-shape:poke(0, 10, 1)  -- 触发晃动
-shape:update(dt)
-shape:draw(x, y)
-```
+rect/circle/ellipse/polygon 命中检测,click/hover/drag/hold/release/enter/leave 事件,支持子区域、offset、启用开关与区域管理器。纯坐标输入,由上层把指针事件喂进来:
 
-### InteractRegion - 交互区域
+`ts
+import { InteractRegion, InteractRegionManager } from './src/gamelib/interactRegion';
 
-处理鼠标/触摸交互。
+const btn = new InteractRegion({
+    shape: 'rect', bounds: [100, 100, 200, 50],
+    interactions: ['click', 'hover'],
+});
+btn.on('click', (x, y) => console.log('Clicked!'));
 
-```lua
-local InteractRegion = require("lib.gamelib.interact_region")
+// 在 Phaser 场景中桥接指针事件:
+this.input.on('pointerdown', (p) => manager.mousepressed(p.x, p.y, 0));
+this.input.on('pointermove', (p) => manager.mousemoved(p.x, p.y));
+this.input.on('pointerup',   (p) => manager.mousereleased(p.x, p.y, 0));
+manager.update(dt);   // hold 检测
+`
 
-local button = InteractRegion.new({
-    shape = "rect",
-    bounds = {100, 100, 200, 50},
-    interactions = {"click", "hover"},
-})
+### Dialogue —— 对话系统
 
-button:on("click", function(x, y) print("Clicked!") end)
-button:on("hover", function(x, y, entering) end)
+条件对话库(优先级/标签/说话者/冷却/变量插值/随机)与对话树(节点/选项/动作/事件)。
 
--- 在 LÖVE 回调中
-button:mousepressed(x, y, button)
-button:mousereleased(x, y, button)
-button:mousemoved(x, y)
-```
+`ts
+import { newLibrary, newTree } from './src/gamelib/dialogue';
 
-### Dialogue - 对话系统
+const lib = newLibrary({
+    entries: [
+        { id: 'greeting', text: '你好,{name}!', conditions: { mood: 'happy' } },
+        { id: 'warning', text: 'HP 不足!', conditions: { hp: ['<', 20] }, priority: 10 },
+    ],
+    variables: { name: (ctx) => ctx.playerName },
+});
+const [entry, text] = lib.get({ mood: 'happy', playerName: '玩家' }) ?? [null, null];
 
-条件对话和对话树。
-
-```lua
-local Dialogue = require("lib.gamelib.dialogue")
-
--- 条件对话库
-local dialogues = Dialogue.newLibrary({
-    entries = {
-        {id = "greeting", text = "你好，{name}!", conditions = {mood = "happy"}},
-        {id = "warning", text = "HP 不足!", conditions = {hp = {"<", 20}}, priority = 10},
-    },
-    variables = {
-        name = function(ctx) return ctx.playerName end,
-    },
-})
-
-local entry, text = dialogues:get({mood = "happy", playerName = "玩家"})
-
--- 对话树
-local tree = Dialogue.newTree({
-    nodes = {
-        start = {
-            text = "你想做什么?",
-            choices = {
-                {text = "战斗", next = "fight"},
-                {text = "离开", next = "leave"},
-            },
+const tree = newTree({
+    nodes: {
+        start: {
+            text: '你想做什么?',
+            choices: [
+                { text: '战斗', next: 'fight' },
+                { text: '离开', next: 'leave' },
+            ],
         },
     },
-})
+});
+tree.start();
+tree.getChoices();   // [{ index, text, disabled }...]
+tree.choose(1);
+`
 
-tree:start()
-tree:choose(1)
-```
+### WeightedEvent —— 加权事件
 
-### WeightedEvent - 加权事件
+带权重随机抽取,支持 modifier(条件/乘数/增量)、保底(pity)、过滤器、统计与模拟。
 
-带权重的随机事件系统。
+`ts
+import { newPool } from './src/gamelib/weightedEvent';
 
-```lua
-local WeightedEvent = require("lib.gamelib.weighted_event")
-
-local lootPool = WeightedEvent.newPool({
-    events = {
-        {id = "common", weight = 80, type = "item"},
-        {id = "rare", weight = 15, type = "item"},
-        {id = "legendary", weight = 5, type = "item"},
-    },
-    pity = {threshold = 50, guarantee = {id = "legendary"}},
-})
-
-local triggered, event = lootPool:roll({baseChance = 0.1})
-```
-
-### ECS - 实体组件系统
-
-轻量级 ECS 架构。
-
-```lua
-local ECS = require("lib.gamelib.ecs")
-
--- 定义组件
-ECS.defineComponent("Position", {x = 0, y = 0})
-ECS.defineComponent("Velocity", {vx = 0, vy = 0})
-
--- 定义系统
-ECS.defineSystem("Movement", {"Position", "Velocity"}, function(entity, dt)
-    local pos = entity:get("Position")
-    local vel = entity:get("Velocity")
-    pos.x = pos.x + vel.vx * dt
-    pos.y = pos.y + vel.vy * dt
-end)
-
--- 创建实体
-local player = ECS.createEntity()
-    :add("Position", {x = 100, y = 100})
-    :add("Velocity", {vx = 50, vy = 0})
-    :tag("player")
-
--- 更新
-ECS.update(dt)
-
--- 查询
-local movingEntities = ECS.query({"Position", "Velocity"})
-local players = ECS.queryByTag("player")
-```
+const loot = newPool({
+    events: [
+        { id: 'common', weight: 80, type: 'item' },
+        { id: 'rare', weight: 15, type: 'item' },
+        { id: 'legendary', weight: 5, type: 'item' },
+    ],
+    pity: { threshold: 50, guarantee: { id: 'legendary' } },
+});
+const [triggered, event] = loot.roll({ baseChance: 0.1 });
+loot.getStats();      // { totalRolls, totalTriggers, events: {...} }
+loot.simulate(1000, { baseChance: 1 });
+`
 
 ## API 文档
 
-详细 API 文档请参考各模块的源码注释或 `docs/` 目录下的文档：
+各模块源文件含中文 JSDoc;模块行为与 Lua 1.x 版等价。
 
-- [Resource API](../../docs/RESOURCE.md)
-- [StateSprite API](../../docs/STATE_SPRITE.md)
-- [ProcShape API](../../docs/PROC_SHAPE.md)
+## 从 Lua 版移植说明
+
+- 构造:Resource.new(config) → new Resource(config);StateSprite.new / ProcShape.new 同理;
+  Dialogue.newLibrary → newLibrary(config);WeightedEvent.newPool → newPool(config)。
+- ECS 保持模块级单例函数式 API(与 Lua 相同,含 reset())。
+- LÖVE 渲染相关方法(Lua 版在无 LÖVE 时为空操作):draw() / loadImage() 等保留签名但不再渲染,
+  渲染交给 Phaser 层(演示场景演示了对接方式)。
+- 数值/坐标均采用 number;颜色为 [r,g,b,a](0-1)数组,供上层换算。
 
 ## 许可证
 
