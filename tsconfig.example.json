@@ -3,7 +3,8 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
+    "experimentalDecorators": true,
     "noEmit": true
   },
-  "include": ["examples/phaser"]
+  "include": ["examples/phaser", "examples/cocos"]
 }
