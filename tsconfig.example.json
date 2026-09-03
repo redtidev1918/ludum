@@ -6,5 +6,5 @@
     "experimentalDecorators": true,
     "noEmit": true
   },
-  "include": ["examples/phaser", "examples/cocos"]
+  "include": ["examples/phaser", "examples/cocos", "examples/headless"]
 }
