@@ -1,5 +1,7 @@
 # 更新日志 (Changelog)
 
+> English: [CHANGELOG.en.md](./CHANGELOG.en.md)
+
 ## 3.0.0
 
 v3 重构后的首个稳定版。自 3.0.0-alpha.2 起无破坏性变更。

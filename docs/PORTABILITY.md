@@ -1,5 +1,7 @@
 # 可移植性 (Portability)
 
+> English: [PORTABILITY.en.md](./PORTABILITY.en.md)
+
 ludum 在三个层次上是可移植的。
 
 ## 第一层 —— 直接 TypeScript 运行时（一等支持）

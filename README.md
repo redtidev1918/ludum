@@ -1,5 +1,7 @@
 # ludum
 
+[English](./README.en.md) · 中文
+
 > 一个小型、引擎无关、强类型的 TypeScript 工具库，用于可复用的 gameplay 系统。
 
 ludum 提供可组合的玩法逻辑构建块 —— ECS、资源与属性、修饰符、状态机、对话、加权

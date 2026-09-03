@@ -1,5 +1,7 @@
 # 架构图 (Architecture Map)
 
+> English: [ARCHITECTURE_MAP.en.md](./ARCHITECTURE_MAP.en.md)
+
 模块 → 允许的依赖。下层绝不 import 上层。
 
 | 模块 | 允许的依赖 |

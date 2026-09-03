@@ -1,5 +1,7 @@
 # ludum x Cocos Creator（集成参考）
 
+> English: [README.en.md](./README.en.md)
+
 类型层面的集成参考，展示 ludum 的纯玩法系统接入一个 Cocos Creator 3.x 组件。
 ludum 拥有**全部**玩法逻辑（状态机、加权符号选择、shuffle bag、余额）；Cocos 负责
 渲染、输入与生命周期。
