@@ -1,6 +1,6 @@
 # InteractRegion —— 交互区域
 
-> 源文件:`src/gamelib/interactRegion.ts`(移植自 `interact_region.lua`)。纯逻辑、引擎无关:只做命中检测与事件分发,指针坐标由上层喂入。
+> 源文件:`src/gamelib/interactRegion.ts`。纯逻辑、引擎无关:只做命中检测与事件分发,指针坐标由上层喂入。
 
 ## 概述
 
@@ -116,11 +116,10 @@ this.input.on('pointerup',   (p) => mgr.mousereleased(p.x, p.y, 0));
 mgr.update(dt);   // hold 检测
 ~~~
 
-## Lua 迁移 / 行为差异
+## 注意事项 / 行为细节
 
-- **构造**:Lua 的 `InteractRegion.new(cfg)` / `InteractRegionManager.new()` → `new InteractRegion(cfg)` / `new InteractRegionManager()`。
 - **渲染**:`debugDraw()` 为空实现(纯逻辑模块)。
-- **多边形点格式**:同时支持 `{x,y}` 与 `[x,y]` 两种,与 Lua 的表/数组双写兼容。
+- **多边形点格式**:同时支持 `{x,y}` 与 `[x,y]` 两种写法。
 - **事件门控差异**:`enter`/`leave` 不受 `interactions` 配置影响,始终派发(以源码为准)。
 
 ## 子区域与事件细节

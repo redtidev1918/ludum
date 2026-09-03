@@ -132,7 +132,7 @@ describe("InteractRegion", () => {
     expect(region.getSubRegion(50, 80)).toBe("bottom");
   });
 
-  it("getSubRegion returns nil for point outside", () => {
+  it("getSubRegion returns null for point outside", () => {
     const region = new InteractRegion({
       shape: "rect",
       bounds: [0, 0, 100, 100],

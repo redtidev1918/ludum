@@ -1,6 +1,5 @@
 // stateSprite.ts - 状态驱动精灵系统
-// 移植自 state_sprite.lua。剔除 LÖVE 渲染:图像加载/绘制退化为"纹理键记录"与空操作,
-// 状态/条件/过渡/临时状态/缓动逻辑原样保留,渲染交由 Phaser 上层负责。
+// 状态机 + 缓动 + 分层状态精灵;图像加载/绘制为"纹理键记录"与空操作,渲染交由 Phaser 上层负责。
 
 export type EasingFunction = (t: number) => number;
 
@@ -37,7 +36,7 @@ export interface StateSpriteDrawOptions {
   color?: number[];
 }
 
-// 缓动函数表(Lua 幂运算符 ^ 移植为 ** / Math.pow)
+// 缓动函数表(幂运算用 ** / Math.pow)
 export const Easing = {
   linear: (t: number) => t,
   inQuad: (t: number) => t * t,
@@ -132,7 +131,7 @@ export class StateSprite {
     this.conditions.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
   }
 
-  /** 记录状态对应的纹理键(原 LÖVE 版加载图像,TS 版仅存键字符串) */
+  /** 记录状态对应的纹理键(仅存键字符串,渲染交由上层) */
   loadImage(stateName: string, imagePath: string): this {
     this.images[stateName] = imagePath;
     return this;
@@ -227,7 +226,7 @@ export class StateSprite {
     return this;
   }
 
-  /** 绘制:无 LÖVE 环境,渲染由 Phaser 上层负责,保留空操作以兼容原 API。 */
+  /** 绘制:渲染由上层负责,此方法保留为空操作。 */
   draw(_x: number, _y: number, _options?: StateSpriteDrawOptions): void {
     // 空操作
   }
@@ -273,8 +272,8 @@ export class StateSprite {
     for (const cond of this.conditions) {
       if (cond.when(this.context)) {
         if (this.states[cond.state]) {
-          // Lua 原实现还计算了 currentPriority/newPriority 但未真正用于分支判断,
-          // 此处仅保留"状态不同即切换"的行为。
+          // 此处计算了 currentPriority/newPriority 但未真正用于分支判断,
+          // 仅保留"状态不同即切换"的行为。
           if (cond.state !== this.currentState) {
             this._transitionTo(cond.state);
           }
@@ -409,7 +408,7 @@ export class LayeredStateSprite {
     return this;
   }
 
-  /** 记录层图像纹理键(原 LÖVE 版加载图像,TS 版仅存键字符串) */
+  /** 记录层图像纹理键(仅存键字符串,渲染交由上层) */
   loadImage(layerName: string, stateName: string, imagePath: string): this {
     if (!this.images[layerName]) {
       this.images[layerName] = {};
@@ -436,7 +435,7 @@ export class LayeredStateSprite {
     return this;
   }
 
-  /** 绘制:无 LÖVE 环境,渲染由 Phaser 上层负责,保留空操作以兼容原 API。 */
+  /** 绘制:渲染由上层负责,此方法保留为空操作。 */
   draw(_x: number, _y: number, _options?: StateSpriteDrawOptions): void {
     // 空操作
   }
@@ -471,6 +470,6 @@ export class LayeredStateSprite {
   }
 }
 
-// 兼容挂载(与 Lua 的 StateSprite.Easing / StateSprite.LayeredStateSprite 一致)
+// 兼容挂载(StateSprite.Easing / StateSprite.LayeredStateSprite)
 StateSprite.Easing = Easing;
 StateSprite.LayeredStateSprite = LayeredStateSprite;

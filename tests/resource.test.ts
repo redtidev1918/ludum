@@ -1,5 +1,5 @@
 // tests/resource.test.ts
-// Resource System 单元测试(由 tests/test_resource.lua 移植)
+// Resource System 单元测试
 
 import { describe, it, expect } from 'vitest';
 import { Resource, DerivedResource, ResourceManager } from '../src/gamelib/resource';

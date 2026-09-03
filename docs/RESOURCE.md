@@ -1,6 +1,6 @@
 # Resource —— 数值资源系统
 
-> 源文件:`src/gamelib/resource.ts`(从 `resource.lua` 移植)。零运行时依赖。
+> 源文件:`src/gamelib/resource.ts`。零运行时依赖。
 
 ## 概述
 
@@ -12,7 +12,7 @@ Resource 模块管理 HP、金币、能量等**数值资源**,提供三种容器
 | `DerivedResource` | 派生资源:依赖其他资源按公式计算 | 否 | 否 |
 | `ResourceManager` | 管理器:注册 / 批量更新 / 批量序列化 | 是(分发) | 是 |
 
-`Resource` 挂载了静态兼容属性 `Resource.DerivedResource`、`Resource.ResourceManager`(对应 Lua 的 `Resource.DerivedResource` / `Resource.ResourceManager` 写法)。
+`Resource` 挂载了静态兼容属性 `Resource.DerivedResource`、`Resource.ResourceManager`。
 
 ## 类型与配置接口
 
@@ -142,10 +142,10 @@ mgr.update(1 / 60);
 const save = mgr.serialize();   // 仅含 hp(有 serialize),不含 tension
 ~~~
 
-## Lua 迁移 / 行为差异
+## 注意事项 / 行为细节
 
-- **构造**:`Resource.new(cfg)` → `new Resource(cfg)`;静态兼容属性 `Resource.DerivedResource`、`Resource.ResourceManager` 仍可用。
-- **`reset()` 默认重置到 `max`**,不是构造时的初始值 —— 这是从 Lua 保留下来的语义(测试锁定 `reset()` 后值为 `100`),如需指定值用 `reset(value)`。
+- **静态兼容属性**:`Resource.DerivedResource`、`Resource.ResourceManager` 仍可用。
+- **`reset()` 默认重置到 `max`**,不是构造时的初始值(测试锁定 `reset()` 后值为 `100`),如需指定值用 `reset(value)`。
 - **`flat` / `percent` 修改器类型存在但未参与计算**:`getEffectiveRegen` 只累加 `regen`,`getEffectiveDecay` 只累加 `decay`;`flat`/`percent` 目前不影响任何数值(以源码为准)。
 - **监听器仅在值实际变化时触发**:`set()` 用严格 `!==` 判断,值未变(如钳制到边界后重复 set 同值)不会触发。
 - **`onMin`/`onMax` 用 `<=`/`>=`**:只要结果值停留在边界(含低于/高于后被钳制到边界),每次变更都会触发。

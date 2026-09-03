@@ -1,6 +1,6 @@
 # Dialogue —— 对话系统
 
-> 源文件:`src/gamelib/dialogue.ts`(移植自 `dialogue.lua`)。分两部分:条件对话库(DialogueLibrary)与对话树(DialogueTree)。工厂 `newLibrary` / `newTree` 对应 Lua 的 `Dialogue.newLibrary` / `Dialogue.newTree`。
+> 源文件:`src/gamelib/dialogue.ts`。分两部分:条件对话库(DialogueLibrary)与对话树(DialogueTree)。工厂 `newLibrary` / `newTree` 分别创建对话库与对话树。
 
 ## 概述
 
@@ -63,7 +63,7 @@ export interface DialogueTreeConfig { nodes?: Record<string, DialogueTreeNode>; 
 
 > 差异:Library 的 `_checkConditions` 支持**全部**操作符 + 函数 + `in`/`between`;而 DialogueTree 的 `_checkConditions` 只支持 `> < >= <= == ~=` 与简单相等(**不支持函数与 in/between**)。
 
-> 真值语义:沿用 Lua —— 仅 `null`/`undefined`/`false` 为假,0、空串均为真(`luaTruthy`)。
+> 真值语义:仅 `null`/`undefined`/`false` 为假,0、空串均为真(`luaTruthy`)。
 
 ## DialogueLibrary 方法
 
@@ -151,12 +151,11 @@ tree.getChoices();   // [{ index: 1, ... }, ...]
 tree.choose(1);      // -> fight
 ~~~
 
-## Lua 迁移 / 行为差异
+## 注意事项 / 行为细节
 
-- **构造**:`Dialogue.newLibrary(cfg)` → `newLibrary(cfg)`;`Dialogue.newTree(cfg)` → `newTree(cfg)`。
-- **`get`/`getRandom` 返回元组**:Lua 多返回值 `entry, text` 在 TS 里是数组 `[entry, text]`(无匹配时 `[null, null]`)。
-- **索引 1-based**:`choose(n)` 与 `getChoices()` 的 `index` 保持 Lua 的 1 起始。
-- **时间**:冷却/历史用 `osTime()`(秒,`Math.floor(Date.now()/1000)`),与 Lua `os.time()` 语义一致。
+- **`get`/`getRandom` 返回元组**:多返回值 `entry, text` 在 TypeScript 里是数组 `[entry, text]`(无匹配时 `[null, null]`)。
+- **索引 1-based**:`choose(n)` 与 `getChoices()` 的 `index` 从 1 开始。
+- **时间**:冷却/历史用 `osTime()`(秒,`Math.floor(Date.now()/1000)`)。
 - **条件真值**:0 与空串为真(仅 null/undefined/false 为假)。
 
 ## 渲染 / 集成提示

@@ -1,6 +1,6 @@
 # ECS —— 实体组件系统
 
-> 源文件:`src/gamelib/ecs.ts`。模块级单例函数式 API,与 Lua 版用法一致。
+> 源文件:`src/gamelib/ecs.ts`。模块级单例函数式 API。
 
 ## 概述
 
@@ -126,9 +126,9 @@ ECS.clearRuntime();              // 清实体,保留组件/系统定义
 ECS.deserialize(data);           // 还原
 ~~~
 
-## Lua 迁移 / 行为差异
+## 注意事项 / 行为细节
 
-- **构造方式不变**:ECS 仍是模块级单例函数式 API,调用风格与 Lua 的 `ECS.xxx` 完全一致;额外支持具名导入单个函数。
+- **调用方式**:模块级单例函数式 API(`ECS.xxx`),同时支持具名导入单个函数。
 - **`update()` 末尾自动清理死亡实体**:`destroy()` 只是标记 `_alive=false`,真正的删除发生在下一次 `update()`(或 `destroyEntity()` 立即删除)。
 - **系统缓存**:`_getSystemEntities` 按组件需求缓存实体列表,实体增删时失效;正常使用无需关心。
 - **`onAdd`/`onRemove` 判定**:`onAdd` 在「新加的组件恰好是 requires 之一且现在满足全部要求」时触发;`onRemove` 在「移除的组件是 requires 之一」时触发(通知发生在组件真正删除之前,故此时仍能读到组件)。

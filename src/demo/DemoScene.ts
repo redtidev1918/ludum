@@ -3,7 +3,7 @@
 import * as Phaser from 'phaser';
 import {
     ECS, Resource, StateSprite, ProcShape, InteractRegion, InteractRegionManager,
-    newLibrary, newTree, newPool,
+    newLibrary, newTree, newPool, EventBus,
 } from '../gamelib';
 import type { RegionPoint } from '../gamelib/interactRegion';
 
@@ -57,6 +57,10 @@ export class DemoScene extends Phaser.Scene {
     private regionG!: Phaser.GameObjects.Graphics;
     private buttons: UiButton[] = [];
 
+    // EventBus(⑧ 模块间解耦)
+    private bus = new EventBus();
+    private busOnceDone = false;
+
     // Dialogue
     private log!: Phaser.GameObjects.Text;
     private logLines: string[] = [];
@@ -90,9 +94,10 @@ export class DemoScene extends Phaser.Scene {
         this.buildDialoguePanel();
         this.buildLootPanel();
         this.buildEcsPanel();
+        this.buildEventBusPanel();
         this.buildInput();
 
-        this.logTo('GameLib v2.0.0 就绪 —— Phaser 4 集成演示', C.good);
+        this.logTo('GameLib v1.0.0 就绪 —— 8 模块集成演示', C.good);
         this.logTo('悬停 / 点击 / 按住拖拽试试', C.dim);
     }
 
@@ -124,7 +129,7 @@ export class DemoScene extends Phaser.Scene {
         const { width } = this.scale;
         this.add.rectangle(width / 2, 20, width, 40, 0x0d1018).setAlpha(0.9);
         this.add.text(14, 11, 'GameLib x Phaser 4 —— 小通用引擎 · 模块集成演示', { fontFamily: 'Arial', fontSize: '16px', color: '#d7e0f2' });
-        const v = this.add.text(884, 11, 'v2.0.0', { fontFamily: 'monospace', fontSize: '13px', color: '#7c8db0' });
+        const v = this.add.text(884, 11, 'v1.0.0', { fontFamily: 'monospace', fontSize: '13px', color: '#7c8db0' });
         v.setOrigin(1, 0);
 
         this.panel(12, 44, 340, 168, '(1) Resource  数值资源');
@@ -506,9 +511,28 @@ export class DemoScene extends Phaser.Scene {
     }
 
     // ------------------------------------------------------------------ 日志
+    // ------------------------------------------------------------------ ⑧ 事件总线演示
+    private buildEventBusPanel(): void {
+        // 两个不同优先级的监听器 + 一次 once 监听
+        this.bus.on('ping', () => this.logTo('[总线] 低优先级监听器收到 ping', C.dim), 0);
+        this.bus.on('ping', () => this.logTo('[总线] 高优先级监听器收到 ping(先执行)', C.accent), 100);
+        this.bus.once('ping', () => this.logTo('[总线] once 监听器只响应第一次', C.gold));
+        // 资源阈值 → 总线广播(生产/消费解耦)
+        this.bus.on('hp:low', (v: number) => this.logTo('[总线] hp:low 广播,当前 HP=' + Math.round(v), C.danger));
+        this.bus.on('hp:recover', (v: number) => this.logTo('[总线] hp:recover 广播,当前 HP=' + Math.round(v), C.good));
+        this.hp.onThreshold(20, 'below', () => { this.bus.emit('hp:low', this.hp.get()); });
+        this.hp.onThreshold(50, 'above', () => { this.bus.emit('hp:recover', this.hp.get()); });
+
+        this.addRectButton('bus_ping', 828, 536, 100, 22, '总线 ping', () => {
+            this.bus.emit('ping');
+            if (!this.busOnceDone) { this.busOnceDone = true; this.logTo('(once 已触发并自动退订,再点不再出现)', C.dim); }
+        });
+        this.logTo('⑧ 事件总线:点右上「总线 ping」→ 订阅者按优先级响应;HP 跌破 20/回 50 也走总线广播', C.dim);
+    }
+
     private logTo(text: string, _color?: string | number): void {
         this.logLines.push(text);
-        if (this.logLines.length > 9) this.logLines.shift();
+        if (this.logLines.length > 5) this.logLines.shift();
         if (!this.log) return;
         const lines: string[] = this.logLines.map((l, i) => (i === this.logLines.length - 1 ? '> ' : '  ') + l);
         this.log.setText(lines);

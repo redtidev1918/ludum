@@ -1,6 +1,6 @@
 # ProcShape —— 程序化形状
 
-> 源文件:`src/gamelib/procShape.ts`(移植自 `proc_shape.lua`)。零运行时依赖,纯几何计算 + 弹簧阻尼物理,不渲染。
+> 源文件:`src/gamelib/procShape.ts`。零运行时依赖,纯几何计算 + 弹簧阻尼物理,不渲染。
 
 ## 概述
 
@@ -121,11 +121,10 @@ curve.update(1 / 60);
 curve.getOutlinePoints();   // 采样后的曲线点
 ~~~
 
-## Lua 迁移 / 行为差异
+## 注意事项 / 行为细节
 
-- **构造**:`ProcShape.new(cfg)` → `new ProcShape(cfg)`;`BezierShape.new(cfg)` → `new BezierShape(cfg)`。
 - **渲染**:`draw()` 空操作;颜色为 `[r,g,b,a]` 0-1,上层换算 0-255 后填给 Phaser。
-- **`config.physics` 的嵌套向量**按 Lua 语义复制成 `{x, y}` 形状;标量直接赋值。
+- **`config.physics` 的嵌套向量**复制成 `{x, y}` 形状;标量直接赋值。
 - **`contains` 是简化命中**(椭圆不处理 sag/bulge/rotation),与 `getOutlinePoints` 的精确几何有差异,按需选择。
 
 ## 命中处理说明

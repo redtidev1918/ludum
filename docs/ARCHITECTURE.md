@@ -1,6 +1,6 @@
 # GameLib 架构设计
 
-本文档说明 GameLib(TS v2.0)的定位、设计原则、模块职责、跨语言约定,以及与 Phaser 4 的对接模式。
+本文档说明 GameLib(TS v1.0)的定位、设计原则、模块职责、通用约定,以及与 Phaser 4 的对接模式。
 
 ## 定位:小通用引擎
 
@@ -9,10 +9,10 @@ GameLib 不追求做一个大而全的游戏框架,而是一个**小而通用的
 这一定位落地为五条设计原则:
 
 1. **引擎无关**:库代码不 import Phaser,也不 import 任何 DOM / Node 专属 API;每个模块只依赖 JS 语言本身。这样同一套系统能同时跑在浏览器(Phaser 演示)、Node(Vitest 测试)与任何其他宿主。
-2. **不重复造轮子**:Phaser 已经有的(渲染、Tween、输入、场景)本库绝不重写,只负责 Phaser 不做或不便做的「纯逻辑」部分。
+2. **不重复造轮子**:Phaser 已经有的(渲染、Tween、输入、场景)本库绝不重复实现,只负责 Phaser 不做或不便做的「纯逻辑」部分。
 3. **社区 / 标准优先**:类型声明、目录布局、构建脚本都遵循社区常规(Vite + TS + Vitest 的标准工程),不引入私有 DSL。
-4. **上游复用**:本库被 LuckyReels 以 git submodule 方式消费,因此 API 稳定性和「不绑定特定引擎」是硬约束,任何会破坏上层复用的耦合都要避免。
-5. **逐 bug 移植语义**:从 Lua 1.x 移植时以「行为等价」为目标,连原实现中「看似不合理但已有测试锁定」的细节(如某些字段只算不用)也一并保留,避免静默改变行为。
+4. **独立可消费**:每个模块可单独导入;库不绑定渲染引擎,显示层按需接入(见下文与 Phaser 的对接模式)。
+5. **行为可预测**:核心行为以单元测试锁定,连「看似不合理但已有测试锁定」的细节(如某些字段只算不用)也一并保留,避免静默改变行为。
 
 ## 目录与模块职责
 
@@ -25,6 +25,7 @@ GameLib 不追求做一个大而全的游戏框架,而是一个**小而通用的
 | `src/gamelib/interactRegion.ts` | 交互区域:`InteractRegion` / `InteractRegionManager`(命中检测 + 事件)。 |
 | `src/gamelib/dialogue.ts` | 对话:`DialogueLibrary` / `DialogueTree`(条件/冷却/插值/历史)。 |
 | `src/gamelib/weightedEvent.ts` | 加权事件:`WeightedEventPool`(权重/修改器/保底/统计)。 |
+| `src/gamelib/eventBus.ts` | 通用发布订阅:`EventBus`(优先级 / once / 异常隔离 / 多实例)。 |
 | `src/gamelib/index.ts` | 汇总导出(`export *`)+ `VERSION` / `getVersion`。 |
 | `src/demo/DemoScene.ts` | Phaser 4 集成演示,展示各模块与引擎的桥接方式。 |
 | `src/main.ts` | Phaser `GameConfig` 启动入口。 |
@@ -35,12 +36,12 @@ GameLib 不追求做一个大而全的游戏框架,而是一个**小而通用的
 - `procShape.bindParam` 接受 `ResourceLike`(只要提供 `get(): number`),因此 `Resource` 与任何 mock 都能直接绑定。
 - `interactRegion.bindToShape` 接受含 `contains(x, y, cx, cy)` 的对象,因此 `ProcShape` 能作为动态区域使用。
 
-## 跨语言约定(Lua → TS)
+## 通用约定
 
 | 约定 | 规则 |
 |---|---|
-| Lua 真值 | 仅 `nil` / `false` 为假;0、空串、空表在 Lua 里为真。TS 版用 `luaTruthy()`(仅 `null`/`undefined`/`false` 为假)在需要处(对话条件)复刻该语义。 |
-| 索引基准 | 内部存储统一 0-based(数组)。但**用户面向的索引保留 Lua 1-based**:`DialogueTree.choose(n)` 与 `getChoices()` 的 `index`、`BezierDeformRule.point` 均从 1 开始。 |
+| 真值语义 | 仅 `null` / `undefined` / `false` 为假;0、空串均为真。用 `luaTruthy()`(仅 `null`/`undefined`/`false` 为假)在需要处(对话条件)表达该语义。 |
+| 索引基准 | 内部存储统一 0-based(数组)。但**用户面向的索引为 1-based**:`DialogueTree.choose(n)` 与 `getChoices()` 的 `index`、`BezierDeformRule.point` 均从 1 开始。 |
 | 时间单位 | `update(dt)` 一律按**秒**;`Resource` 修改器 `duration`、`StateSprite` 过渡/临时状态时长均为秒。 |
 | 颜色 | 统一 `[r, g, b, a]` 数组,分量 0-1;上层换算 0-255。 |
 | 链式 | 修改型方法返回 `this`,便于串联。 |
@@ -120,7 +121,7 @@ this.input.on('pointerup',   (p) => this.regions.mousereleased(p.x, p.y, 0));
 - `ECS.serialize()` / `ECS.deserialize()`(含 `nextId`)。
 - `WeightedEventPool.serialize()` / `deserialize()`(统计与历史)。
 
-`DerivedResource` 刻意不实现 `update` / `serialize`,靠 `ResourceManager` 的鸭子判断(`typeof update === 'function'` 等)区分「基础资源」与「派生资源」,这是从 Lua 保留下来的结构约定。
+`DerivedResource` 刻意不实现 `update` / `serialize`,靠 `ResourceManager` 的鸭子判断(`typeof update === 'function'` 等)区分「基础资源」与「派生资源」,这是一条结构约定。
 
 ## 依赖方向
 
@@ -134,7 +135,7 @@ this.input.on('pointerup',   (p) => this.regions.mousereleased(p.x, p.y, 0));
             └──────────────▲───────────────┘
         ┌────────┬─────────┼─────────┬────────┐
         │        │         │         │        │
-      ecs   resource  stateSprite procShape ... weightedEvent
+      ecs   resource  stateSprite procShape ... weightedEvent eventBus
         └────────┴─────────┴─────────┴────────┘
           (各模块彼此仅通过鸭子类型弱耦合,无循环依赖)
 ~~~
@@ -144,6 +145,6 @@ this.input.on('pointerup',   (p) => this.regions.mousereleased(p.x, p.y, 0));
 ## 测试策略
 
 - 运行器:**Vitest**,`environment: 'node'`(纯逻辑库无需 DOM)。
-- 覆盖:7 个测试文件、共 **182** 个 `it` 用例,与 `src/gamelib` 模块一一对应。
+- 覆盖:8 个测试文件、共 **196** 个 `it` 用例,与 `src/gamelib` 模块一一对应。
 - 每个测试文件通过 `describe` 组织,ECS 用 `beforeEach(reset)` 保证用例隔离。
 - 配置复用 `vite.config.ts` 的 `test` 块(`include: ['tests/**/*.test.ts']`)。

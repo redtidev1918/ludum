@@ -1,6 +1,6 @@
 /**
  * Entity-Component System (ECS)
- * 模块级单例:所有函数操作模块级私有状态,与 Lua 版保持一致用法。
+ * 模块级单例:所有函数操作模块级私有状态。
  */
 
 interface ComponentDefinition {
@@ -531,7 +531,7 @@ export function clearRuntime(): void {
 }
 
 /**
- * ECS 聚合对象:保持 Lua 版 "ECS.xxx" 的调用习惯,
+ * ECS 聚合对象:保持 "ECS.xxx" 的调用习惯,
  * 也支持直接具名导入单个函数。
  */
 export const ECS = {

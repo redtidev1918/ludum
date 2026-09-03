@@ -1,5 +1,5 @@
 // tests/procShape.test.ts
-// Procedural Shape System 单元测试(移植自 tests/test_proc_shape.lua)
+// Procedural Shape System 单元测试
 import { describe, expect, it } from "vitest";
 import { ProcShape, BezierShape } from "../src/gamelib/procShape";
 import type { ResourceLike } from "../src/gamelib/procShape";

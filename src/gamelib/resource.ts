@@ -1,7 +1,7 @@
 /**
  * Resource System - 资源/数值系统
  *
- * 从 Lua resource.lua 移植。提供三种数值容器:
+ * 提供三种数值容器:
  *  - Resource 基础资源(带修改器/阈值/监听器/序列化)
  *  - DerivedResource 派生资源(依赖其他资源按公式计算)
  *  - ResourceManager 资源管理器(注册/批量更新/批量序列化)
@@ -87,7 +87,7 @@ export class Resource {
     max: (() => void)[];
   };
 
-  /** Lua 兼容:Resource.DerivedResource / Resource.ResourceManager */
+  /** 静态兼容属性:Resource.DerivedResource / Resource.ResourceManager */
   static DerivedResource: typeof DerivedResource;
   static ResourceManager: typeof ResourceManager;
 
@@ -495,6 +495,6 @@ export class ResourceManager {
   }
 }
 
-// Lua 兼容:Resource.DerivedResource / Resource.ResourceManager
+// 静态兼容属性:Resource.DerivedResource / Resource.ResourceManager
 Resource.DerivedResource = DerivedResource;
 Resource.ResourceManager = ResourceManager;

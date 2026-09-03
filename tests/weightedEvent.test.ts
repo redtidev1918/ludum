@@ -1,5 +1,5 @@
 // tests/weightedEvent.test.ts
-// Weighted Event System 单元测试(从 tests/test_weighted_event.lua 移植)
+// Weighted Event System 单元测试
 import { describe, it, expect } from 'vitest';
 import { newPool } from '../src/gamelib/weightedEvent';
 

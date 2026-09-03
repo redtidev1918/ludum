@@ -1,6 +1,6 @@
 # WeightedEvent —— 加权随机事件
 
-> 源文件:`src/gamelib/weightedEvent.ts`(移植自 `weighted_event.lua`)。工厂 `newPool` 对应 Lua 的 `WeightedEvent.newPool`。
+> 源文件:`src/gamelib/weightedEvent.ts`。工厂 `newPool` 创建加权随机事件池。
 
 ## 概述
 
@@ -100,10 +100,9 @@ const stats = loot.getStats();            // { totalRolls, totalTriggers, events
 const sim = loot.simulate(1000, { baseChance: 1 });   // 分布模拟
 ~~~
 
-## Lua 迁移 / 行为差异
+## 注意事项 / 行为细节
 
-- **构造**:`WeightedEvent.newPool(cfg)` → `newPool(cfg)`。
-- **返回元组**:Lua 多返回值 `triggered, event` → TS 数组 `[boolean, event | undefined]`。
+- **返回元组**:多返回值 `triggered, event` 在 TypeScript 里是数组 `[boolean, event | undefined]`。
 - **`pity.reset` 未使用**:字段保留但逻辑中不读(以源码为准)。
 - **时间单位**:历史条目 `time` 用 `Date.now()`(**毫秒**),与 DialogueLibrary 的秒不同。
 - **`simulate` 的副作用**:`simulate` 会恢复 `rollCount`/`lastTriggerRoll` 与 `history` 长度,**但不会回滚 `stats` 计数** —— 模拟期间 `stats.events[id].count/lastRoll` 会被真实累加(以源码为准)。需要纯净统计时先 `resetStats()` 或在模拟前自行备份。

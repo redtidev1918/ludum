@@ -1,6 +1,6 @@
 # StateSprite —— 状态精灵
 
-> 源文件:`src/gamelib/stateSprite.ts`(移植自 `state_sprite.lua`)。剔除 LÖVE 渲染:图像加载/绘制退化为「纹理键记录」与空操作,状态机逻辑原样保留,渲染交由 Phaser 上层。
+> 源文件:`src/gamelib/stateSprite.ts`。图像加载/绘制退化为「纹理键记录」与空操作,状态机逻辑独立,渲染交由 Phaser 上层。
 
 ## 概述
 
@@ -131,12 +131,11 @@ layered.updateContext({ embarrassed: true });   // face -> blush
 layered.getLayerState('face');                   // 'blush'
 ~~~
 
-## Lua 迁移 / 行为差异
+## 注意事项 / 行为细节
 
-- **构造**:`StateSprite.new(cfg)` → `new StateSprite(cfg)`;`LayeredStateSprite.new(cfg)` → `new LayeredStateSprite(cfg)`。
 - **渲染**:`draw()` 是空操作;`loadImage()`/`preloadImages()` 只记录纹理键字符串,不加载图像。
-- **状态优先级 `state.priority` 不参与分支**:Lua 原实现计算了 `currentPriority/newPriority` 但未真正用于条件判断,TS 版保留该「只存不用」的字段(以源码为准)。
-- **缓动**:Lua 的幂运算符 `^` 移植为 `**` / `Math.pow`;缓动名在 `Easing` 表中查找,查不到回退 `linear`。
+- **状态优先级 `state.priority` 不参与分支**:实现计算了 `currentPriority/newPriority` 但未真正用于条件判断,保留该「只存不用」的字段(以源码为准)。
+- **缓动**:幂运算用 `**` / `Math.pow`;缓动名在 `Easing` 表中查找,查不到回退 `linear`。
 
 ## 临时状态与 `currentState` 的关系
 

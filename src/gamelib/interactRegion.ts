@@ -1,6 +1,5 @@
 /**
  * InteractRegion - 交互区域系统(纯逻辑,引擎无关)。
- * 移植自 Lua interact_region.lua。
  */
 
 /** 多边形/区域点:支持 {x,y} 对象或 [x,y] 数组两种形式。 */
@@ -390,9 +389,9 @@ export class InteractRegion {
     this.state.currentSubRegion = null;
   }
 
-  /** 绘制调试信息。原 Lua 依赖 LÖVE,TS 中为纯逻辑模块,保留空实现。 */
+  /** 绘制调试信息。纯逻辑模块不渲染,保留空实现。 */
   debugDraw(_options?: unknown): void {
-    // 无 LÖVE 环境,空操作。
+    // 无渲染环境,空操作。
   }
 
   /** 绑定到 ProcShape(动态区域)。 */

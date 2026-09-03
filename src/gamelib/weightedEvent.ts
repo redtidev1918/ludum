@@ -1,5 +1,5 @@
 // src/gamelib/weightedEvent.ts
-// Weighted Event System —— 从 weighted_event.lua 移植
+// Weighted Event System —— 加权随机事件池
 // 加权随机事件池:基础权重 + 修改器(multiply/add) + 保底(pity) + 历史/统计。
 
 export type WeightedEventContext = Record<string, unknown>;
@@ -47,7 +47,7 @@ interface HistoryEntry {
   time: number;
 }
 
-// 检查事件是否匹配过滤器(逐 key 相等比较,与 Lua pairs 语义一致)
+// 检查事件是否匹配过滤器(逐 key 相等比较)
 function matchesFilter(event: WeightedEventItem, filter?: Record<string, unknown>): boolean {
   if (!filter) return true;
   const record = event as unknown as Record<string, unknown>;
@@ -388,7 +388,7 @@ export class WeightedEventPool {
   }
 }
 
-// 工厂函数(Lua 的 WeightedEvent.newPool)
+// 工厂函数(WeightedEvent.newPool)
 export function newPool(config: WeightedEventPoolConfig): WeightedEventPool {
   return new WeightedEventPool(config);
 }

@@ -1,5 +1,5 @@
 // procShape.ts — 程序化形状系统(ProcShape / BezierShape)
-// 移植自 Lua proc_shape.lua。零运行时依赖,纯 TypeScript。
+// 零运行时依赖,纯 TypeScript,纯几何计算 + 弹簧阻尼物理。
 
 /** 二维点 {x, y} */
 export interface Point {
@@ -90,7 +90,7 @@ export class ProcShape {
         if (config.physics) {
             for (const [k, v] of Object.entries(config.physics)) {
                 if (typeof v === "object" && v !== null) {
-                    // 嵌套表复制为 {x=.., y=..} 形状(照搬 Lua)
+                    // 嵌套对象复制为 {x=.., y=..} 形状
                     const vec = v as Partial<Vec2>;
                     (this.physics as unknown as Record<string, unknown>)[k] = {
                         x: vec.x ?? 0,
@@ -336,9 +336,9 @@ export class ProcShape {
         return inside;
     }
 
-    /** 绘制(LÖVE 环境);TS 无渲染环境,保留空操作 */
+    /** 绘制:纯逻辑模块无渲染环境,保留空操作 */
     draw(_cx: number, _cy: number, _options?: Record<string, unknown>): void {
-        // LÖVE 渲染已剔除:无渲染环境,此方法为空操作。
+        // 无渲染环境,此方法为空操作。
     }
 
     /** 设置颜色 */
@@ -376,7 +376,7 @@ export interface BezierControlPoint {
 
 /** 贝塞尔变形规则 */
 export interface BezierDeformRule {
-    /** 控制点索引(1-based,与 Lua 一致) */
+    /** 控制点索引(1-based) */
     point: number;
     axis: "x" | "y";
     param: string;
@@ -632,9 +632,9 @@ export class BezierShape {
         return points;
     }
 
-    /** 绘制(LÖVE 环境);TS 无渲染环境,保留空操作 */
+    /** 绘制:纯逻辑模块无渲染环境,保留空操作 */
     draw(_cx: number, _cy: number, _options?: Record<string, unknown>): void {
-        // LÖVE 渲染已剔除:无渲染环境,此方法为空操作。
+        // 无渲染环境,此方法为空操作。
     }
 
     /** 设置颜色 */

@@ -1,5 +1,5 @@
 // src/gamelib/dialogue.ts
-// Conditional Dialogue System —— 从 dialogue.lua 移植
+// Conditional Dialogue System —— 条件对话库 + 对话树
 // 对话库(条件/冷却/变量插值/历史/随机) + 对话树(节点/选择/事件)。
 
 export type DialogueContext = Record<string, any>;
@@ -42,12 +42,12 @@ export interface DialogueTreeConfig {
   nodes?: Record<string, DialogueTreeNode>;
 }
 
-// Lua 中仅 nil/false 为假(0、空串均为真)
+// 仅 null/undefined/false 为假(0、空串均为真)
 function luaTruthy(v: unknown): boolean {
   return v !== null && v !== undefined && v !== false;
 }
 
-// os.time() 返回秒,Date.now() 返回毫秒;冷却/历史单位为秒,这里换算保持语义一致
+// 冷却/历史以秒为单位;Date.now() 返回毫秒,这里换算为秒
 function osTime(): number {
   return Math.floor(Date.now() / 1000);
 }
@@ -272,7 +272,7 @@ export class DialogueLibrary {
     return this.history.slice(start);
   }
 
-  /** 清除冷却(id 为 nil 时清除全部) */
+  /** 清除冷却(id 缺省时清除全部) */
   clearCooldown(id?: string): this {
     if (id != null) {
       delete this.cooldowns[id];
@@ -523,12 +523,12 @@ export class DialogueTree {
   }
 }
 
-/** 工厂:创建对话库(兼容 Lua Dialogue.newLibrary) */
+/** 工厂:创建对话库 */
 export function newLibrary(config: DialogueLibraryConfig): DialogueLibrary {
   return new DialogueLibrary(config);
 }
 
-/** 工厂:创建对话树(兼容 Lua Dialogue.newTree) */
+/** 工厂:创建对话树 */
 export function newTree(config: DialogueTreeConfig): DialogueTree {
   return new DialogueTree(config);
 }

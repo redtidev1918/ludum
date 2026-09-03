@@ -1,17 +1,17 @@
 # GameLib
 
-通用游戏系统库(TS 版)—— 一套**引擎无关、零运行时依赖**的轻量级游戏系统库。本仓库是原 Lua 版(1.x)的完整 TypeScript 重构版(v2.0),7 个游戏系统模块保持与 Lua 版等价的 API 与行为,并随附一个可运行的 **Phaser 4** 集成演示。
+通用游戏系统库(TS 版)—— 一套**引擎无关、零运行时依赖**的轻量级游戏系统库。8 个游戏系统模块覆盖 ECS / 资源 / 状态精灵 / 程序化形状 / 交互区域 / 对话 / 加权事件,并随附一个可运行的 **Phaser 4** 集成演示。
 
-> 上游消费方 LuckyReels 以 git submodule 方式引用本库,共享同一套 ECS / 资源 / 状态精灵 / 程序化形状 / 交互区域 / 对话 / 加权事件系统。
+> 每个模块可单独导入、也可整体引入;模块之间通过 `EventBus` 等轻量件按需解耦。
 
 ## 特性
 
 - **引擎无关**:库本体是纯 TypeScript,不 import Phaser、不依赖 DOM,可独立复用于任何 JS/TS 运行时。
 - **零运行时依赖**:`dependencies` 中仅 `phaser` 用于演示场景,库代码本身零依赖。
 - **链式 API**:绝大多数方法返回 `this`,可流畅串联。
-- **182 个测试**:所有单元测试由 Lua 原版完整移植为 Vitest,覆盖 7 个模块的核心行为。
+- **196 个测试**:Vitest 单元测试覆盖 8 个模块的核心行为。
 - **Phaser 4 演示**:`src/demo/DemoScene.ts` 展示每个模块在 Phaser 场景里的真实对接方式。
-- **上游复用**:LuckyReels 以 submodule 形式消费本库,是「小通用引擎」设计原则的落地范例。
+- **可组合**:模块间无隐式依赖;跨系统通信推荐用 `EventBus` 解耦。
 
 ## 技术栈
 
@@ -39,7 +39,7 @@
 
 ~~~bash
 npm install        # 安装依赖
-npm test           # 运行 182 个单元测试
+npm test           # 运行 196 个单元测试
 npm run dev        # 启动 Phaser 4 演示(浏览器打开 http://localhost:5173)
 npm run typecheck  # 类型检查
 npm run build      # 生产构建
@@ -50,13 +50,13 @@ npm run build      # 生产构建
 ~~~text
 GameLib/
 ├── index.html               # 演示入口页面
-├── package.json             # 包名 gamelib,v2.0.0
+├── package.json             # 包名 gamelib,v1.0.0
 ├── tsconfig.json            # TS 配置(strict)
 ├── vite.config.ts           # Vite + Vitest 共用配置
 ├── src/
 │   ├── main.ts              # Phaser 4 启动入口
 │   ├── demo/
-│   │   └── DemoScene.ts     # 7 个模块的集成演示场景
+│   │   └── DemoScene.ts     # 8 个模块的集成演示场景
 │   └── gamelib/             # ★ 库本体(引擎无关、零依赖)
 │       ├── index.ts         # 汇总导出 + VERSION/getVersion
 │       ├── ecs.ts           # ECS 实体组件系统
@@ -66,7 +66,7 @@ GameLib/
 │       ├── interactRegion.ts# InteractRegion / InteractRegionManager
 │       ├── dialogue.ts      # DialogueLibrary / DialogueTree
 │       └── weightedEvent.ts # WeightedEventPool
-├── tests/                   # Vitest 单元测试(182 个)
+├── tests/                   # Vitest 单元测试(196 个)
 └── docs/                    # 模块文档(README 之外的详细 API)
 ~~~
 
@@ -166,6 +166,21 @@ const [ok, ev] = loot.roll({ baseChance: 1 });
 loot.getStats();      // { totalRolls, totalTriggers, events: {...} }
 ~~~
 
+### EventBus —— 通用事件总线
+
+引擎无关的发布订阅:支持优先级、一次性监听、按 id 退订、异常隔离;可多实例。
+
+~~~ts
+import { EventBus } from './src/gamelib/eventBus';
+
+const bus = new EventBus();
+const id = bus.on('coin', (amount: number) => console.log('coin +' + amount), 10);
+bus.once('levelUp', () => console.log('升级!'));
+bus.emit('coin', 5);          // 两个监听器按优先级顺序收到
+bus.off('coin', id);          // 退订
+bus.count('coin');            // 0
+~~~
+
 ## 模块一览
 
 | 模块 | 文件 | 说明 | 文档 |
@@ -177,33 +192,22 @@ loot.getStats();      // { totalRolls, totalTriggers, events: {...} }
 | InteractRegion | `interactRegion.ts` | 交互区域命中检测与事件 | [docs/INTERACT_REGION.md](docs/INTERACT_REGION.md) |
 | Dialogue | `dialogue.ts` | 条件对话库 + 对话树 | [docs/DIALOGUE.md](docs/DIALOGUE.md) |
 | WeightedEvent | `weightedEvent.ts` | 加权随机事件池(修改器/保底/统计) | [docs/WEIGHTED_EVENT.md](docs/WEIGHTED_EVENT.md) |
+| EventBus | `eventBus.ts` | 通用发布订阅(优先级/once/异常隔离/多实例) | [docs/EVENT_BUS.md](docs/EVENT_BUS.md) |
 
 设计原则与 Phaser 4 对接模式见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
-## 从 Lua 1.x 迁移
+## 行为约定
 
-构造方式由 `Xxx.new(...)` 改为 TS 的 `new Xxx(...)`(或等价工厂函数):
+### 渲染约定
 
-| Lua 1.x | TS v2.0 |
-|---|---|
-| `Resource.new(cfg)` | `new Resource(cfg)` |
-| `StateSprite.new(cfg)` | `new StateSprite(cfg)` |
-| `ProcShape.new(cfg)` | `new ProcShape(cfg)` |
-| `Dialogue.newLibrary(cfg)` | `newLibrary(cfg)` |
-| `Dialogue.newTree(cfg)` | `newTree(cfg)` |
-| `WeightedEvent.newPool(cfg)` | `newPool(cfg)` |
-| `ECS.*`(函数式单例) | `ECS.*`(保持不变,也可具名导入单个函数) |
-
-渲染语义变化:
-
-- LÖVE 的 `draw()` 在 TS 版是**空操作**(签名保留,渲染交给上层);`loadImage()` / `preloadImages()` 退化为「纹理键字符串记录」,不真正加载/绘制。
+- 库模块不直接渲染:`draw()` 是**空操作**(签名保留,渲染交给上层);`loadImage()` / `preloadImages()` 记录「纹理键字符串」,不真正加载/绘制。
 - 上层(如 Phaser)依据 `getState()` / `getOutlinePoints()` / `getControlPoints()` 拿到纯几何数据,自己绘制(见 `DemoScene.ts`)。
 
-数值与颜色约定:
+### 数值与颜色约定
 
 - 坐标 / 数值 / 时间均为 JS `number`;`dt` 一律以**秒**为单位。
 - 颜色统一为 `[r, g, b, a]` 数组,分量取 `0-1`;上层换算到 0-255(见 `DemoScene.ts` 的颜色换算)。
 
 ## 许可证
 
-[MIT](LICENSE) —— Copyright (c) 2024 LuckyReels Team。
+[MIT](LICENSE) —— Copyright (c) 2026 GameLib Team。

@@ -1,5 +1,5 @@
 // tests/dialogue.test.ts
-// Conditional Dialogue System 单元测试(从 tests/test_dialogue.lua 移植)
+// Conditional Dialogue System 单元测试
 import { describe, it, expect } from 'vitest';
 import { newLibrary, newTree } from '../src/gamelib/dialogue';
 

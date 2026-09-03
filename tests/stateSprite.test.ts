@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Easing, LayeredStateSprite, StateSprite } from "../src/gamelib/stateSprite";
 
-// 近似断言:Lua 的 assertApprox(expected, actual, tolerance)
+// 近似断言:assertApprox(expected, actual, tolerance)
 function assertApprox(expected: number, actual: number, tolerance = 0.001): void {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
 }
