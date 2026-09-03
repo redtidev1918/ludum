@@ -1,7 +1,7 @@
 {
   "name": "ludum",
   "description": "ludum — a small, engine-agnostic, deterministic TypeScript toolkit for composable gameplay systems (ECS, resources, state machines, dialogue, weighted selection, geometry, interaction).",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "type": "module",
   "license": "MIT",
   "engines": {

@@ -42,7 +42,7 @@ export * from './definition.js';
 export * from './validation.js';
 
 /** ludum 版本号 */
-export const VERSION = '3.0.0';
+export const VERSION = '3.0.1';
 
 /** ludum 描述 */
 export const DESCRIPTION = '引擎无关、零运行时依赖的 TypeScript gameplay systems toolkit';

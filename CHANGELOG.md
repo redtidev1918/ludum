@@ -2,6 +2,11 @@
 
 > English: [CHANGELOG.en.md](./CHANGELOG.en.md)
 
+## 3.0.1
+
+- 文档中文化（README / CHANGELOG / PORTABILITY / ARCHITECTURE_MAP / cocos README），并补充英文版 `*.en.md`。
+- 一键运行演示：`npm start`（`prestart` 自动装依赖，跨平台）。
+
 ## 3.0.0
 
 v3 重构后的首个稳定版。自 3.0.0-alpha.2 起无破坏性变更。

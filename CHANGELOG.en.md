@@ -2,6 +2,11 @@
 
 > 中文：[CHANGELOG.md](./CHANGELOG.md)
 
+## 3.0.1
+
+- Docs translated to Chinese (README / CHANGELOG / PORTABILITY / ARCHITECTURE_MAP / cocos README), with English `*.en.md` counterparts.
+- One-command demo: `npm start` (`prestart` auto-installs, cross-platform).
+
 ## 3.0.0
 
 First stable release of the v3 rewrite. No breaking changes since 3.0.0-alpha.2.
