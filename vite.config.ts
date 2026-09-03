@@ -10,7 +10,8 @@ export default defineConfig({
         outDir: 'dist-demo'
     },
     server: {
-        port: 5173
+        port: 5173,
+        open: true
     },
     test: {
         include: ['tests/**/*.test.ts'],

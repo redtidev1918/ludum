@@ -22,6 +22,18 @@ import { World, Resource, SeededRandom } from "ludum";
 import { World } from "ludum/ecs"; // 子路径导出，更好的 tree-shaking
 ```
 
+## 一键运行演示
+
+克隆后一条命令即可跑起 Phaser 4 演示（首次会自动装依赖并打开浏览器）：
+
+```bash
+git clone https://github.com/redtidev1918/ludum.git
+cd ludum
+./run-demo.sh          # 或: npm install && npm start
+```
+
+浏览器会自动打开 http://localhost:5173。
+
 ## 架构
 
 库分为四层。相对 v1 的破坏性变更见 `docs/migration-v3.md`；有约束力的决策记录在

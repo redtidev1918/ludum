@@ -60,6 +60,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
+    "start": "npm run dev",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.lib.json && tsc -p tsconfig.test.json && tsc -p tsconfig.example.json",

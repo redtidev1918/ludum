@@ -23,6 +23,16 @@ import { World, Resource, SeededRandom } from "ludum";
 import { World } from "ludum/ecs"; // subpath export, better tree-shaking
 ```
 
+## Run the demo (one command)
+
+```bash
+git clone https://github.com/redtidev1918/ludum.git
+cd ludum
+./run-demo.sh          # or: npm install && npm start
+```
+
+The browser opens automatically at http://localhost:5173.
+
 ## Architecture
 
 The library is organized into four layers. Breaking changes from v1 are in
