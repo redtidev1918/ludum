@@ -1,13 +1,13 @@
-# GameLib
+# ludus
 
 > A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.
 
-GameLib provides composable building blocks for gameplay logic — ECS, resources &
+ludus provides composable building blocks for gameplay logic — ECS, resources &
 attributes, modifiers, state machines, dialogue, weighted random selection, pity
 systems, gameplay conditions, geometry, and interaction hit-testing — that run in any
 JS/TS host (browser, Node, Deno, Bun) with **zero runtime dependencies**.
 
-GameLib is **not** a game engine, renderer, scene framework, physics engine, asset
+ludus is **not** a game engine, renderer, scene framework, physics engine, asset
 pipeline, UI framework, audio framework, networking layer, or service framework.
 
 ## Status: v3 migration in progress
@@ -75,4 +75,4 @@ typecheck. See `docs/adr/0001-engine-independent-core.md`.
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2026 GameLib Team.
+[MIT](LICENSE) — Copyright (c) 2026 ludus Team.

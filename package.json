@@ -1,6 +1,6 @@
 {
-  "name": "gamelib",
-  "description": "A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems — ECS, resources & attributes, modifiers, state machines, dialogue, weighted random, geometry, interaction.",
+  "name": "ludus",
+  "description": "ludus — a small, engine-agnostic, deterministic TypeScript toolkit for composable gameplay systems (ECS, resources, state machines, dialogue, weighted selection, geometry, interaction).",
   "version": "3.0.0",
   "type": "module",
   "license": "MIT",

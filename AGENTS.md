@@ -5,7 +5,7 @@ Read this before modifying anything. It is a contract, not a tutorial.
 
 ## Mission
 
-GameLib is a small, engine-agnostic, strongly-typed TypeScript toolkit for reusable
+ludus is a small, engine-agnostic, strongly-typed TypeScript toolkit for reusable
 gameplay systems (ECS, resources, modifiers, state machines, dialogue, weighted random,
 pity, conditions, geometry, interaction hit-testing). It is **not** a game engine,
 renderer, scene framework, physics engine, UI framework, audio framework, or service
@@ -16,7 +16,7 @@ framework.
 - The core library (`src/gamelib`) must not import Phaser, DOM, browser, Node-specific,
   or example code. It compiles against `lib: ["ES2022"]` only (`tsconfig.lib.json`).
 - Runtime dependencies are zero. Phaser is a devDependency for the example only.
-- Dependency direction: `examples → GameLib`. Never the reverse.
+- Dependency direction: `examples → ludus`. Never the reverse.
 - Separate Definitions (static, shareable) from Runtime instances (session state).
 - Prefer pure algorithms; keep state in a small stateful shell.
 - ECS is an optional composition option, not the framework root. Resource / Dialogue /
@@ -51,7 +51,7 @@ Every change must pass `npm run check` before completion:
 typecheck (lib + test + example) + tests + `build:lib`.
 
 Local, targeted iteration: `npm run test:ecs`, `test:resource`, `test:dialogue`,
-`test:weighted`, `test:state`, `test:geometry`, `test:events`.
+`test:weighted`, `test:state`, `test:geometry`, `test:runtime`, `test:rules`.
 Full gate: `npm run check`.
 
 ## Scope discipline

@@ -1,500 +1,389 @@
 /**
- * Resource System - 资源/数值系统
+ * Resource — a mutable numeric gameplay value with value/range semantics
+ * (see docs/adr/0002, 0004, 0009). HP, mana, heat, morale, etc.
  *
- * 提供三种数值容器:
- *  - Resource 基础资源(带修改器/阈值/监听器/序列化)
- *  - DerivedResource 派生资源(依赖其他资源按公式计算)
- *  - ResourceManager 资源管理器(注册/批量更新/批量序列化)
- *
- * 零运行时依赖,纯 TypeScript。
+ * - Implements `ValueSource<number>` so downstream modules depend on the capability.
+ * - addModifier copies caller input into internal runtime state (no caller mutation).
+ * - subscriptions (change / threshold) return unsubscribe functions.
  */
+import type { ValueSource } from './runtime/value-source.js';
 
-/** 修改器类型 */
-export type ModifierType = "flat" | "percent" | "decay" | "regen";
+export type ResourceModifierKind = 'regen' | 'decay';
 
-/** 修改器 */
+/** Caller-owned modifier input. `id` is required and is the caller's source id. */
 export interface ResourceModifier {
-  /** 修改器唯一标识(缺省时自动生成) */
-  id?: string;
-  /** 修改器类型 */
-  type: ModifierType;
-  /** 修改值 */
-  value: number;
-  /** 持续时间(秒),缺省表示永久 */
-  duration?: number;
-  /** 已经过时间(addModifier 时归零) */
-  elapsed?: number;
-  /** 优先级(越高越先应用) */
-  priority?: number;
+    id: string;
+    kind: ResourceModifierKind;
+    /** Rate, in units per second. */
+    amountPerSecond: number;
+    /** Duration in seconds. Omit for a permanent modifier. */
+    durationSeconds?: number;
 }
 
-/** 基础资源配置 */
 export interface ResourceConfig {
-  id?: string;
-  value?: number;
-  min?: number;
-  max?: number;
-  regen?: number;
-  decay?: number;
+    id?: string;
+    value?: number;
+    min?: number;
+    max?: number;
+    regenPerSecond?: number;
+    decayPerSecond?: number;
 }
 
-/** 阈值监听方向 */
-export type ThresholdDirection = "above" | "below" | "equal" | "cross";
+export type ThresholdDirection = 'above' | 'below' | 'cross';
 
-/** 阈值条目 */
-interface ThresholdEntry {
-  value: number;
-  direction: ThresholdDirection;
-  callback: (oldValue: number, newValue: number) => void;
-  lastTriggered: boolean;
+interface RuntimeModifier {
+    id: string;
+    kind: ResourceModifierKind;
+    amountPerSecond: number;
+    durationSeconds?: number;
+    elapsedSeconds: number;
 }
 
-/** 序列化后的基础资源数据 */
-export interface SerializedResource {
-  id: string;
-  value: number;
-  min: number;
-  max: number;
-  baseRegen: number;
-  baseDecay: number;
-  modifiers: Record<string, ResourceModifier>;
+interface Threshold {
+    value: number;
+    direction: ThresholdDirection;
+    listener: (newValue: number) => void;
 }
 
-/** 派生资源配置 */
-export interface DerivedResourceConfig {
-  id?: string;
-  dependencies?: Record<string, Resource | number>;
-  formula: (deps: Record<string, number>) => number;
-  min?: number;
-  max?: number;
-}
-
-/**
- * 基础资源:持有 value,带修改器(modifiers)、阈值(thresholds)与监听器(listeners)。
- */
-export class Resource {
-  id: string;
-  value: number;
-  min: number;
-  max: number;
-  baseRegen: number;
-  baseDecay: number;
-  modifiers: Record<string, ResourceModifier> = {};
-  thresholds: ThresholdEntry[] = [];
-  listeners: {
-    change: ((oldValue: number, newValue: number) => void)[];
-    min: (() => void)[];
-    max: (() => void)[];
-  };
-
-  /** 静态兼容属性:Resource.DerivedResource / Resource.ResourceManager */
-  static DerivedResource: typeof DerivedResource;
-  static ResourceManager: typeof ResourceManager;
-
-  constructor(config: ResourceConfig = {}) {
-    this.id = config.id ?? "unnamed";
-    this.value = config.value ?? 0;
-    this.min = config.min ?? 0;
-    this.max = config.max ?? 100;
-    this.baseRegen = config.regen ?? 0;
-    this.baseDecay = config.decay ?? 0;
-    this.modifiers = {};
-    this.thresholds = [];
-    this.listeners = {
-      change: [],
-      min: [],
-      max: [],
-    };
-
-    // 确保初始值在范围内
-    this.value = Math.max(this.min, Math.min(this.max, this.value));
-  }
-
-  /** 获取当前值 */
-  get(): number {
-    return this.value;
-  }
-
-  /** 获取百分比 (0-1) */
-  getPercent(): number {
-    if (this.max === this.min) {
-      return 1;
-    }
-    return (this.value - this.min) / (this.max - this.min);
-  }
-
-  /** 设置值(钳制到 min/max) */
-  set(newValue: number): this {
-    const oldValue = this.value;
-    this.value = Math.max(this.min, Math.min(this.max, newValue));
-
-    if (oldValue !== this.value) {
-      this._notifyChange(oldValue, this.value);
-      this._checkThresholds(oldValue, this.value);
-    }
-
-    return this;
-  }
-
-  /** 增加值 */
-  add(amount: number): this {
-    return this.set(this.value + amount);
-  }
-
-  /** 减少值 */
-  subtract(amount: number): this {
-    return this.set(this.value - amount);
-  }
-
-  /** 设置最大值 */
-  setMax(newMax: number): this {
-    this.max = newMax;
-    if (this.value > this.max) {
-      this.set(this.max);
-    }
-    return this;
-  }
-
-  /** 设置最小值 */
-  setMin(newMin: number): this {
-    this.min = newMin;
-    if (this.value < this.min) {
-      this.set(this.min);
-    }
-    return this;
-  }
-
-  /** 添加修改器 */
-  addModifier(modifier: ResourceModifier): this {
-    if (modifier.id == null) {
-      modifier.id = "mod_" + Date.now() + "_" + (Math.floor(Math.random() * 1000) + 1);
-    }
-    modifier.elapsed = 0;
-    modifier.priority = modifier.priority ?? 0;
-    this.modifiers[modifier.id] = modifier;
-    return this;
-  }
-
-  /** 移除修改器 */
-  removeModifier(modifierId: string): this {
-    delete this.modifiers[modifierId];
-    return this;
-  }
-
-  /** 检查是否有指定修改器 */
-  hasModifier(modifierId: string): boolean {
-    return this.modifiers[modifierId] != null;
-  }
-
-  /** 获取所有修改器 */
-  getModifiers(): Record<string, ResourceModifier> {
-    return this.modifiers;
-  }
-
-  /** 计算有效恢复率(基础 + 修改器) */
-  getEffectiveRegen(): number {
-    let regen = this.baseRegen;
-    for (const mod of Object.values(this.modifiers)) {
-      if (mod.type === "regen") {
-        regen = regen + mod.value;
-      }
-    }
-    return regen;
-  }
-
-  /** 计算有效衰减率(基础 + 修改器) */
-  getEffectiveDecay(): number {
-    let decay = this.baseDecay;
-    for (const mod of Object.values(this.modifiers)) {
-      if (mod.type === "decay") {
-        decay = decay + mod.value;
-      }
-    }
-    return decay;
-  }
-
-  /** 更新资源(每帧调用) */
-  update(dt: number): this {
-    // 更新修改器计时并移除过期的
-    const toRemove: string[] = [];
-    for (const id of Object.keys(this.modifiers)) {
-      const mod = this.modifiers[id];
-      if (mod.duration != null) {
-        mod.elapsed = (mod.elapsed ?? 0) + dt;
-        if (mod.elapsed >= mod.duration) {
-          toRemove.push(id);
-        }
-      }
-    }
-    for (const id of toRemove) {
-      delete this.modifiers[id];
-    }
-
-    // 应用恢复和衰减
-    const regen = this.getEffectiveRegen();
-    const decay = this.getEffectiveDecay();
-    const delta = (regen - decay) * dt;
-
-    if (delta !== 0) {
-      this.add(delta);
-    }
-
-    return this;
-  }
-
-  /** 注册阈值事件 */
-  onThreshold(threshold: number, direction: ThresholdDirection, callback: (oldValue: number, newValue: number) => void): this {
-    this.thresholds.push({
-      value: threshold,
-      direction: direction,
-      callback: callback,
-      lastTriggered: false,
-    });
-    return this;
-  }
-
-  /** 注册变化监听器 */
-  onChange(callback: (oldValue: number, newValue: number) => void): this {
-    this.listeners.change.push(callback);
-    return this;
-  }
-
-  /** 注册到达最小值监听器 */
-  onMin(callback: () => void): this {
-    this.listeners.min.push(callback);
-    return this;
-  }
-
-  /** 注册到达最大值监听器 */
-  onMax(callback: () => void): this {
-    this.listeners.max.push(callback);
-    return this;
-  }
-
-  /** @private 通知变化与 min/max 监听器 */
-  private _notifyChange(oldValue: number, newValue: number): void {
-    for (const callback of this.listeners.change) {
-      callback(oldValue, newValue);
-    }
-
-    if (newValue <= this.min) {
-      for (const callback of this.listeners.min) {
-        callback();
-      }
-    }
-
-    if (newValue >= this.max) {
-      for (const callback of this.listeners.max) {
-        callback();
-      }
-    }
-  }
-
-  /** @private 检查阈值触发 */
-  private _checkThresholds(oldValue: number, newValue: number): void {
-    for (const t of this.thresholds) {
-      let shouldTrigger = false;
-
-      if (t.direction === "below") {
-        shouldTrigger = oldValue >= t.value && newValue < t.value;
-      } else if (t.direction === "above") {
-        shouldTrigger = oldValue <= t.value && newValue > t.value;
-      } else if (t.direction === "equal") {
-        shouldTrigger = newValue === t.value && oldValue !== t.value;
-      } else if (t.direction === "cross") {
-        shouldTrigger =
-          (oldValue < t.value && newValue >= t.value) ||
-          (oldValue > t.value && newValue <= t.value);
-      }
-
-      if (shouldTrigger) {
-        t.callback(oldValue, newValue);
-      }
-    }
-  }
-
-  /** 重置到初始状态 */
-  reset(initialValue?: number): this {
-    this.modifiers = {};
-    this.value = initialValue ?? this.max;
-    this.value = Math.max(this.min, Math.min(this.max, this.value));
-    return this;
-  }
-
-  /** 序列化为表(用于存档) */
-  serialize(): SerializedResource {
-    return {
-      id: this.id,
-      value: this.value,
-      min: this.min,
-      max: this.max,
-      baseRegen: this.baseRegen,
-      baseDecay: this.baseDecay,
-      modifiers: this.modifiers,
-    };
-  }
-
-  /** 从表反序列化 */
-  static deserialize(data: {
+export interface ResourceSnapshotV1 {
+    schemaVersion: 1;
     id: string;
     value: number;
     min: number;
     max: number;
-    baseRegen: number;
-    baseDecay: number;
-    modifiers?: Record<string, ResourceModifier>;
-  }): Resource {
-    const res = new Resource({
-      id: data.id,
-      value: data.value,
-      min: data.min,
-      max: data.max,
-      regen: data.baseRegen,
-      decay: data.baseDecay,
-    });
-    res.modifiers = data.modifiers ?? {};
-    return res;
-  }
+    regenPerSecond: number;
+    decayPerSecond: number;
+    modifiers: Array<{
+        id: string;
+        kind: ResourceModifierKind;
+        amountPerSecond: number;
+        durationSeconds?: number;
+        elapsedSeconds: number;
+    }>;
+}
+
+export class Resource implements ValueSource<number> {
+    readonly id: string;
+    private _value: number;
+    private _min: number;
+    private _max: number;
+    private baseRegenPerSecond: number;
+    private baseDecayPerSecond: number;
+    private modifiers = new Map<string, RuntimeModifier>();
+    private changeListeners = new Set<(oldValue: number, newValue: number) => void>();
+    private thresholds: Threshold[] = [];
+
+    constructor(config: ResourceConfig = {}) {
+        const min = config.min ?? 0;
+        const max = config.max ?? 100;
+        validateRange(min, max);
+        this._min = min;
+        this._max = max;
+        this.baseRegenPerSecond = validateFinite(config.regenPerSecond ?? 0, 'regenPerSecond');
+        this.baseDecayPerSecond = validateFinite(config.decayPerSecond ?? 0, 'decayPerSecond');
+        this.id = config.id ?? 'unnamed';
+        this._value = clamp(validateFinite(config.value ?? 0, 'value'), min, max);
+    }
+
+    // ------------------------------------------------------------------ Read
+
+    get(): number {
+        return this._value;
+    }
+
+    get min(): number {
+        return this._min;
+    }
+
+    get max(): number {
+        return this._max;
+    }
+
+    get regenPerSecond(): number {
+        return this.baseRegenPerSecond;
+    }
+
+    get decayPerSecond(): number {
+        return this.baseDecayPerSecond;
+    }
+
+    get modifierCount(): number {
+        return this.modifiers.size;
+    }
+
+    /** Value normalized to [0, 1] over [min, max]. Returns 1 for a zero-width range. */
+    getPercent(): number {
+        if (this._max === this._min) return 1;
+        return (this._value - this._min) / (this._max - this._min);
+    }
+
+    // ------------------------------------------------------------------ Mutate
+
+    set(newValue: number): this {
+        const clamped = clamp(validateFinite(newValue, 'value'), this._min, this._max);
+        if (clamped !== this._value) {
+            const oldValue = this._value;
+            this._value = clamped;
+            this.notifyChange(oldValue, clamped);
+        }
+        return this;
+    }
+
+    add(amount: number): this {
+        return this.set(this._value + validateFinite(amount, 'amount'));
+    }
+
+    subtract(amount: number): this {
+        return this.set(this._value - validateFinite(amount, 'amount'));
+    }
+
+    setMax(newMax: number): this {
+        validateRange(this._min, newMax);
+        this._max = newMax;
+        if (this._value > newMax) this.set(newMax);
+        return this;
+    }
+
+    setMin(newMin: number): this {
+        validateRange(newMin, this._max);
+        this._min = newMin;
+        if (this._value < newMin) this.set(newMin);
+        return this;
+    }
+
+    reset(initialValue?: number): this {
+        this.modifiers.clear();
+        this._value = clamp(initialValue ?? this._max, this._min, this._max);
+        return this;
+    }
+
+    // ------------------------------------------------------------------ Modifiers
+
+    /** Add a modifier. The input is copied; the caller's object is never mutated. */
+    addModifier(modifier: ResourceModifier): this {
+        if (typeof modifier.id !== 'string' || modifier.id.trim().length === 0) {
+            throw new Error('Resource.addModifier: modifier.id must be a non-empty string');
+        }
+        if (modifier.amountPerSecond == null || !Number.isFinite(modifier.amountPerSecond)) {
+            throw new Error(`Resource.addModifier: modifier "${modifier.id}" has invalid amountPerSecond ${modifier.amountPerSecond}`);
+        }
+        if (modifier.durationSeconds != null && (!Number.isFinite(modifier.durationSeconds) || modifier.durationSeconds < 0)) {
+            throw new Error(`Resource.addModifier: modifier "${modifier.id}" has invalid durationSeconds ${modifier.durationSeconds}`);
+        }
+        this.modifiers.set(modifier.id, {
+            id: modifier.id,
+            kind: modifier.kind,
+            amountPerSecond: modifier.amountPerSecond,
+            durationSeconds: modifier.durationSeconds,
+            elapsedSeconds: 0,
+        });
+        return this;
+    }
+
+    removeModifier(id: string): this {
+        this.modifiers.delete(id);
+        return this;
+    }
+
+    hasModifier(id: string): boolean {
+        return this.modifiers.has(id);
+    }
+
+    getEffectiveRegen(): number {
+        let regen = this.baseRegenPerSecond;
+        for (const mod of this.modifiers.values()) {
+            if (mod.kind === 'regen') regen += mod.amountPerSecond;
+        }
+        return regen;
+    }
+
+    getEffectiveDecay(): number {
+        let decay = this.baseDecayPerSecond;
+        for (const mod of this.modifiers.values()) {
+            if (mod.kind === 'decay') decay += mod.amountPerSecond;
+        }
+        return decay;
+    }
+
+    // ------------------------------------------------------------------ Tick
+
+    update(dtSeconds: number): this {
+        if (!Number.isFinite(dtSeconds) || dtSeconds < 0) {
+            throw new Error(`Resource.update: dtSeconds must be a finite number >= 0, got ${dtSeconds}`);
+        }
+        for (const [id, mod] of this.modifiers) {
+            if (mod.durationSeconds != null) {
+                mod.elapsedSeconds += dtSeconds;
+                if (mod.elapsedSeconds >= mod.durationSeconds) {
+                    this.modifiers.delete(id);
+                }
+            }
+        }
+        const delta = (this.getEffectiveRegen() - this.getEffectiveDecay()) * dtSeconds;
+        if (delta !== 0) this.add(delta);
+        return this;
+    }
+
+    // ------------------------------------------------------------------ Subscriptions
+
+    /** Subscribe to value changes. Returns an unsubscribe function. */
+    subscribeChange(listener: (oldValue: number, newValue: number) => void): () => void {
+        this.changeListeners.add(listener);
+        return () => {
+            this.changeListeners.delete(listener);
+        };
+    }
+
+    /** Subscribe to a threshold crossing. Returns an unsubscribe function. */
+    onThreshold(threshold: number, direction: ThresholdDirection, listener: (newValue: number) => void): () => void {
+        validateFinite(threshold, 'threshold');
+        const entry: Threshold = { value: threshold, direction, listener };
+        this.thresholds.push(entry);
+        return () => {
+            const i = this.thresholds.indexOf(entry);
+            if (i >= 0) this.thresholds.splice(i, 1);
+        };
+    }
+
+    // ------------------------------------------------------------------ Snapshot
+
+    serialize(): ResourceSnapshotV1 {
+        return {
+            schemaVersion: 1,
+            id: this.id,
+            value: this._value,
+            min: this._min,
+            max: this._max,
+            regenPerSecond: this.baseRegenPerSecond,
+            decayPerSecond: this.baseDecayPerSecond,
+            modifiers: [...this.modifiers.values()].map((m) => ({ ...m })),
+        };
+    }
+
+    static deserialize(snapshot: ResourceSnapshotV1): Resource {
+        if (snapshot.schemaVersion !== 1) {
+            throw new Error(`Resource.deserialize: unsupported schemaVersion ${snapshot.schemaVersion}`);
+        }
+        const resource = new Resource({
+            id: snapshot.id,
+            min: snapshot.min,
+            max: snapshot.max,
+            regenPerSecond: snapshot.regenPerSecond,
+            decayPerSecond: snapshot.decayPerSecond,
+        });
+        resource._value = clamp(snapshot.value, snapshot.min, snapshot.max);
+        for (const m of snapshot.modifiers ?? []) {
+            resource.modifiers.set(m.id, { ...m });
+        }
+        return resource;
+    }
+
+    // ------------------------------------------------------------------ Internals
+
+    private notifyChange(oldValue: number, newValue: number): void {
+        for (const listener of this.changeListeners) {
+            listener(oldValue, newValue);
+        }
+        for (const t of this.thresholds) {
+            let crossed = false;
+            if (t.direction === 'below') crossed = oldValue >= t.value && newValue < t.value;
+            else if (t.direction === 'above') crossed = oldValue <= t.value && newValue > t.value;
+            else if (t.direction === 'cross') {
+                crossed = (oldValue < t.value && newValue >= t.value) || (oldValue > t.value && newValue <= t.value);
+            }
+            if (crossed) t.listener(newValue);
+        }
+    }
 }
 
 /**
- * 派生资源:依赖其他资源按公式计算值。
- * 无 update/serialize(供 ResourceManager 鸭子判断)。
+ * A computed numeric value derived from other ValueSource<number> inputs.
+ * Read-on-demand (no cache, no listeners).
  */
-export class DerivedResource {
-  id: string;
-  dependencies: Record<string, Resource | number>;
-  formula: (deps: Record<string, number>) => number;
-  min: number;
-  max: number;
-  cachedValue: number;
-  listeners: {
-    change: ((oldValue: number, newValue: number) => void)[];
-  };
+export class DerivedResource implements ValueSource<number> {
+    readonly id: string;
+    private readonly dependencies: Record<string, ValueSource<number>>;
+    private readonly formula: (deps: Record<string, number>) => number;
+    private readonly min: number;
+    private readonly max: number;
 
-  constructor(config: DerivedResourceConfig) {
-    this.id = config.id ?? "derived";
-    this.dependencies = config.dependencies ?? {};
-    this.formula = config.formula;
-    this.min = config.min ?? -Infinity;
-    this.max = config.max ?? Infinity;
-    this.cachedValue = 0;
-    this.listeners = {
-      change: [],
-    };
-  }
-
-  /** 获取当前值(重新计算) */
-  get(): number {
-    const deps: Record<string, number> = {};
-    for (const name of Object.keys(this.dependencies)) {
-      const resource = this.dependencies[name];
-      if (resource !== null && typeof resource === "object" && typeof resource.get === "function") {
-        deps[name] = resource.get();
-      } else {
-        deps[name] = resource as number;
-      }
+    constructor(config: {
+        id?: string;
+        dependencies: Record<string, ValueSource<number>>;
+        formula: (deps: Record<string, number>) => number;
+        min?: number;
+        max?: number;
+    }) {
+        this.id = config.id ?? 'derived';
+        this.dependencies = config.dependencies;
+        this.formula = config.formula;
+        this.min = config.min ?? -Infinity;
+        this.max = config.max ?? Infinity;
+        validateRange(this.min, this.max);
     }
 
-    let newValue = this.formula(deps);
-    newValue = Math.max(this.min, Math.min(this.max, newValue));
-
-    if (newValue !== this.cachedValue) {
-      const oldValue = this.cachedValue;
-      this.cachedValue = newValue;
-      for (const callback of this.listeners.change) {
-        callback(oldValue, newValue);
-      }
+    get(): number {
+        const deps: Record<string, number> = {};
+        for (const [name, source] of Object.entries(this.dependencies)) {
+            deps[name] = source.get();
+        }
+        return clamp(this.formula(deps), this.min, this.max);
     }
 
-    return this.cachedValue;
-  }
-
-  /** 获取百分比 */
-  getPercent(): number {
-    if (this.max === this.min) {
-      return 1;
+    getPercent(): number {
+        if (this.max === this.min) return 1;
+        return (this.get() - this.min) / (this.max - this.min);
     }
-    const value = this.get();
-    return (value - this.min) / (this.max - this.min);
-  }
-
-  /** 更新依赖 */
-  setDependency(name: string, resource: Resource | number): this {
-    this.dependencies[name] = resource;
-    return this;
-  }
-
-  /** 注册变化监听器 */
-  onChange(callback: (oldValue: number, newValue: number) => void): this {
-    this.listeners.change.push(callback);
-    return this;
-  }
 }
 
-/**
- * 资源管理器:注册/获取/批量更新/批量序列化资源。
- */
-export class ResourceManager {
-  resources: Record<string, Resource | DerivedResource>;
+/** Registers, looks up, and enumerates resources. Does not own update or serialization. */
+export class ResourceRegistry {
+    private readonly resources = new Map<string, Resource>();
 
-  constructor() {
-    this.resources = {};
-  }
-
-  /** 注册资源 */
-  register(resource: Resource | DerivedResource): this {
-    this.resources[resource.id] = resource;
-    return this;
-  }
-
-  /** 获取资源 */
-  get(id: string): Resource | DerivedResource | undefined {
-    return this.resources[id];
-  }
-
-  /** 更新所有资源(鸭子判断:仅含 update 方法者) */
-  update(dt: number): this {
-    for (const resource of Object.values(this.resources)) {
-      if (typeof (resource as Partial<Resource>).update === "function") {
-        (resource as Resource).update(dt);
-      }
+    register(resource: Resource): this {
+        this.resources.set(resource.id, resource);
+        return this;
     }
-    return this;
-  }
 
-  /** 序列化所有资源(鸭子判断:仅含 serialize 方法者) */
-  serialize(): Record<string, SerializedResource> {
-    const data: Record<string, SerializedResource> = {};
-    for (const id of Object.keys(this.resources)) {
-      const resource = this.resources[id];
-      if (typeof (resource as Partial<Resource>).serialize === "function") {
-        data[id] = (resource as Resource).serialize();
-      }
+    get(id: string): Resource | undefined {
+        return this.resources.get(id);
     }
-    return data;
-  }
 
-  /** 反序列化资源(仅更新含 value 字段的资源) */
-  deserialize(data: Record<string, SerializedResource>): this {
-    for (const id of Object.keys(data)) {
-      const resData = data[id];
-      const existing = this.resources[id];
-      if (existing && (existing as Resource).value != null) {
-        // 更新现有资源
-        const res = existing as Resource;
-        res.value = resData.value;
-        res.min = resData.min;
-        res.max = resData.max;
-        res.baseRegen = resData.baseRegen;
-        res.baseDecay = resData.baseDecay;
-        res.modifiers = resData.modifiers ?? {};
-      }
+    require(id: string): Resource {
+        const resource = this.resources.get(id);
+        if (!resource) throw new Error(`ResourceRegistry: unknown id "${id}"`);
+        return resource;
     }
-    return this;
-  }
+
+    has(id: string): boolean {
+        return this.resources.has(id);
+    }
+
+    delete(id: string): boolean {
+        return this.resources.delete(id);
+    }
+
+    values(): IterableIterator<Resource> {
+        return this.resources.values();
+    }
 }
 
-// 静态兼容属性:Resource.DerivedResource / Resource.ResourceManager
-Resource.DerivedResource = DerivedResource;
-Resource.ResourceManager = ResourceManager;
+function validateRange(min: number, max: number): void {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        throw new Error(`Resource: min and max must be finite, got min=${min} max=${max}`);
+    }
+    if (min > max) {
+        throw new Error(`Resource: min (${min}) cannot be greater than max (${max})`);
+    }
+}
+
+function validateFinite(value: number, name: string): number {
+    if (!Number.isFinite(value)) {
+        throw new Error(`Resource: ${name} must be a finite number, got ${value}`);
+    }
+    return value;
+}
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+}

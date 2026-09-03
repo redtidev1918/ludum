@@ -1,14 +1,22 @@
-// GameLib x Phaser 4 —— 模块集成演示场景
+// ludus x Phaser 4 —— 模块集成演示场景
 // 演示:ECS / Resource / StateSprite / ProcShape / InteractRegion / Dialogue / WeightedEvent
 import * as Phaser from 'phaser';
 import {
-    World, defineComponent, Resource, StateSprite, ProcShape, InteractRegion, InteractRegionManager,
-    newLibrary, newTree, createWeightedSession, SystemRandom,
+    World, defineComponent, Resource, StateMachine, ProcShape, InteractRegion, InteractRegionManager,
+    DialogueSession, selectLine, formatDialogueText, createWeightedSession, SystemRandom,
 } from '../gamelib';
+import type { VisualStateMap, DialogueDefinition, DialogueLine } from '../gamelib';
 import type { RegionPoint } from '../gamelib/interactRegion';
 
 const Position = defineComponent({ name: 'Position', defaults: { x: 0, y: 0 } });
 const Velocity = defineComponent({ name: 'Velocity', defaults: { vx: 0, vy: 0 } });
+
+type GameContext = {
+    hp: number;
+    money: number;
+    mood?: string;
+    name?: string;
+};
 
 // 调色板
 const C = {
@@ -44,8 +52,9 @@ export class DemoScene extends Phaser.Scene {
     private hpText!: Phaser.GameObjects.Text;
     private resInfo!: Phaser.GameObjects.Text;
 
-    // StateSprite
-    private character!: StateSprite;
+    // State
+    private character!: StateMachine<GameContext>;
+    private visualStates!: VisualStateMap;
     private charImages = new Map<string, Phaser.GameObjects.Image>();
     private charName!: Phaser.GameObjects.Text;
 
@@ -65,7 +74,9 @@ export class DemoScene extends Phaser.Scene {
     private logLines: string[] = [];
     private chat!: Phaser.GameObjects.Text;
     private treeTitle!: Phaser.GameObjects.Text;
-    private tree!: ReturnType<typeof newTree>;
+    private tree!: DialogueSession<GameContext>;
+    private barkLines!: DialogueLine<GameContext>[];
+    private barkRandom = new SystemRandom();
     private choiceG!: Phaser.GameObjects.Graphics;
     private choiceItems: ChoiceItem[] = [];
 
@@ -96,7 +107,7 @@ export class DemoScene extends Phaser.Scene {
         this.buildEcsPanel();
         this.buildInput();
 
-        this.logTo('GameLib v3.0.0 就绪 —— 7 模块集成演示', C.good);
+        this.logTo('ludus v3.0.0 就绪 —— 7 模块集成演示', C.good);
         this.logTo('悬停 / 点击 / 按住拖拽试试', C.dim);
     }
 
@@ -127,7 +138,7 @@ export class DemoScene extends Phaser.Scene {
     private buildLayout(): void {
         const { width } = this.scale;
         this.add.rectangle(width / 2, 20, width, 40, 0x0d1018).setAlpha(0.9);
-        this.add.text(14, 11, 'GameLib x Phaser 4 —— 小通用引擎 · 模块集成演示', { fontFamily: 'Arial', fontSize: '16px', color: '#d7e0f2' });
+        this.add.text(14, 11, 'ludus x Phaser 4 —— 小通用引擎 · 模块集成演示', { fontFamily: 'Arial', fontSize: '16px', color: '#d7e0f2' });
         const v = this.add.text(884, 11, 'v3.0.0', { fontFamily: 'monospace', fontSize: '13px', color: '#7c8db0' });
         v.setOrigin(1, 0);
 
@@ -174,7 +185,7 @@ export class DemoScene extends Phaser.Scene {
 
     // ------------------------------------------------------------------ (1) Resource
     private buildResourcePanel(): void {
-        this.hp = new Resource({ id: 'hp', value: 100, max: 100, regen: 2 });
+        this.hp = new Resource({ id: 'hp', value: 100, max: 100, regenPerSecond: 2 });
         this.gold = new Resource({ id: 'gold', value: 50, max: 999 });
 
         const barBg = this.add.rectangle(24, 84, 316, 18, 0x0d1018).setOrigin(0, 0);
@@ -193,38 +204,36 @@ export class DemoScene extends Phaser.Scene {
             this.logTo('治疗 12 点', C.good);
         });
         this.addRectButton('r_poison', 228, 150, 112, 26, '中毒 8s(-4/s)', () => {
-            this.hp.addModifier({ id: 'poison', type: 'decay', value: 4, duration: 8 });
+            this.hp.addModifier({ id: 'poison', kind: 'decay', amountPerSecond: 4, durationSeconds: 8 });
             this.logTo('中了剧毒:8 秒内每秒 -4 HP', C.warn);
         });
         this.txt(24, 184, 'onThreshold(20, below) -> 危险提示;modifier 到期自动移除', C.dim, '10px');
         this.txt(24, 198, 'add 伤害时若穿过 20/0 阈值会触发事件(见日志)', C.dim, '10px');
         this.hp.onThreshold(20, 'below', () => this.logTo('[阈值] HP 跌破 20!', C.danger));
         this.hp.onThreshold(50, 'above', () => this.logTo('[阈值] HP 回到 50 以上', C.good));
-        this.hp.onChange((oldV, newV) => {
+        this.hp.subscribeChange((oldV, newV) => {
             if (oldV !== newV && newV === this.hp.max) this.logTo('[事件] HP 回满', C.good);
         });
     }
 
-    // ------------------------------------------------------------------ (2) StateSprite
+    // ------------------------------------------------------------------ (2) StateMachine
     private buildCharacterPanel(): void {
-        this.character = new StateSprite({
-            states: {
-                neutral: { sprite: 'faceNeutral' },
-                happy: { sprite: 'faceHappy', priority: 5 },
-                critical: { sprite: 'faceCritical', priority: 10 },
-            },
+        this.character = new StateMachine<GameContext>({
+            states: ['neutral', 'happy', 'critical'],
+            initialState: 'neutral',
             conditions: [
-                { state: 'critical', when: (ctx) => ctx.hp < 25 },
-                { state: 'happy', when: (ctx) => ctx.money > 120 },
+                { state: 'critical', when: (ctx) => ctx.hp < 25, priority: 10 },
+                { state: 'happy', when: (ctx) => ctx.money > 120, priority: 5 },
             ],
-            defaultState: 'neutral',
         });
-        this.character.loadImage('neutral', 'faceNeutral');
-        this.character.loadImage('happy', 'faceHappy');
-        this.character.loadImage('critical', 'faceCritical');
+        this.visualStates = {
+            neutral: { textureKey: 'faceNeutral' },
+            happy: { textureKey: 'faceHappy' },
+            critical: { textureKey: 'faceCritical' },
+        };
 
         for (const name of ['neutral', 'happy', 'critical']) {
-            const img = this.add.image(66, 288, this.character.images[name]);
+            const img = this.add.image(66, 288, this.visualStates[name].textureKey);
             img.setOrigin(0.5).setScale(1.7).setAlpha(0);
             this.charImages.set(name, img);
         }
@@ -240,8 +249,8 @@ export class DemoScene extends Phaser.Scene {
             this.logTo('金币 -100', C.gold);
         });
         this.addRectButton('c_tmp', 128, 324, 202, 26, '临时状态:开心 3 秒', () => {
-            this.character.setState('happy', { duration: 3 });
-            this.logTo('临时状态 happy 3 秒(setState duration)', C.accent);
+            this.character.setState('happy', { durationSeconds: 3 });
+            this.logTo('临时状态 happy 3 秒(setState durationSeconds)', C.accent);
         });
         this.txt(128, 358, '状态:neutral/happy/critical,条件按 priority 降序判定', C.dim, '10px');
         this.character.onStateChange((oldS, newS) => this.logTo('[状态] ' + oldS + ' -> ' + newS, C.accent));
@@ -313,39 +322,26 @@ export class DemoScene extends Phaser.Scene {
 
     // ------------------------------------------------------------------ (5) Dialogue
     private buildDialoguePanel(): void {
-        const lib = newLibrary({
-            entries: [
-                {
-                    id: 'greet', speaker: 'npc', priority: 1,
-                    text: '你好,{name}!今天有 {money} 枚金币,心情{mood}!',
-                    conditions: { mood: 'happy' },
-                },
-                {
-                    id: 'warn', speaker: 'npc', priority: 10, cooldown: 3,
-                    text: '喂,{name}!血量只剩 {hp},快治疗!',
-                    conditions: { hp: ['<', 30] },
-                },
-                { id: 'idle', speaker: 'npc', priority: 0, text: '空气不错。金币 > 120 会让我开心。' },
-            ],
-            variables: {
-                name: () => '玩家',
-                mood: (ctx: Record<string, number>) => (ctx.money > 120 ? '很好' : '一般'),
-            },
-        });
+        this.barkLines = [
+            { id: 'warn', text: '喂,{name}!血量只剩 {hp},快治疗!', priority: 10, condition: (c) => c.hp < 30 },
+            { id: 'greet', text: '你好,{name}!今天有 {money} 枚金币,心情{mood}!', priority: 1, condition: (c) => c.mood === 'happy' },
+            { id: 'idle', text: '空气不错。金币 > 120 会让我开心。', priority: 0 },
+        ];
 
-        this.txt(378, 60, '[NPC] 每 2 秒根据条件说一句(DialogueLibrary)', C.dim, '10px');
+        this.txt(378, 60, '[NPC] 每 2 秒根据条件说一句(selectLine)', C.dim, '10px');
         this.chat = this.txt(378, 76, '(等待 NPC 说话…)', C.text, '11px');
         this.treeTitle = this.txt(378, 108, '对话树:点击 [开始对话树]', C.text, '12px');
 
         const startTree = (): void => {
-            this.tree = newTree({
+            const definition: DialogueDefinition<GameContext> = {
+                startNodeId: 'start',
                 nodes: {
                     start: {
                         text: '你想做什么,冒险者?',
                         choices: [
-                            { text: '战斗!', next: 'fight' },
-                            { text: '休息一下', next: 'rest' },
-                            { text: '离开' },
+                            { id: 'fight', text: '战斗!', next: 'fight' },
+                            { id: 'rest', text: '休息一下', next: 'rest' },
+                            { id: 'leave', text: '离开' },
                         ],
                     },
                     fight: {
@@ -359,26 +355,26 @@ export class DemoScene extends Phaser.Scene {
                         next: 'start',
                     },
                 },
-            });
-            this.tree.on('nodeEnter', (_id: string) => this.logTo('[对话] 进入节点', C.accent));
-            this.tree.on('choiceMade', (idx: number) => this.logTo('[对话] 选择了选项 #' + idx, C.accent));
-            this.tree.on('treeEnd', () => this.logTo('[对话] 树结束(treeEnd)', C.dim));
-            this.tree.start('start', {});
+            };
+            this.tree = new DialogueSession<GameContext>(definition, { hp: Math.round(this.hp.get()), money: Math.round(this.gold.get()) });
+            this.logTo('[对话] 开始对话树', C.accent);
             this.refreshTree();
         };
 
         this.addRectButton('d_start', 378, 466, 110, 26, '开始对话树', startTree);
         this.txt(378, 500, '选择由 getChoices() 动态生成矩形区域', C.dim, '10px');
-        this.txt(378, 518, '对话条目带条件/优先级/冷却/变量插值', C.dim, '10px');
+        this.txt(378, 518, '对话条目带条件/优先级;选择用稳定 id(非 1-based)', C.dim, '10px');
 
         this.time.addEvent({ delay: 2000, loop: true, callback: () => {
-            const ctx = {
+            const ctx: GameContext = {
                 hp: Math.round(this.hp.get()),
                 money: Math.round(this.gold.get()),
                 mood: this.gold.get() > 120 ? 'happy' : 'calm',
+                name: '玩家',
             };
-            const [, text] = lib.getRandom(ctx);
-            if (text) {
+            const line = selectLine(this.barkLines, ctx, this.barkRandom);
+            if (line) {
+                const text = formatDialogueText(line.text, ctx);
                 this.chat.setText(text);
                 this.logTo('NPC: ' + text, C.text);
             }
@@ -404,7 +400,7 @@ export class DemoScene extends Phaser.Scene {
 
         const choices = this.tree.getChoices();
         // 无选项的节点提供 [继续]
-        if (!choices) {
+        if (choices.length === 0) {
             const region = new InteractRegion({ shape: 'rect', bounds: [378, 136, 250, 22], interactions: ['click'] });
             region.on('click', () => {
                 this.tree.continue();
@@ -420,10 +416,10 @@ export class DemoScene extends Phaser.Scene {
             const y = 138 + i * 30;
             const region = new InteractRegion({ shape: 'rect', bounds: [378, y, 250, 26], interactions: ['click', 'hover'] });
             region.on('click', () => {
-                this.tree.choose(choice.index);
+                this.tree.choose(choice.id);
                 this.refreshTree();
             });
-            const id = 'choice_' + i;
+            const id = 'choice_' + choice.id;
             this.regions.register(id, region);
             const t = this.txt(388, y + 7, (i + 1) + '. ' + choice.text, C.text, '12px');
             this.choiceItems.push({ region, text: t, id });
@@ -527,17 +523,16 @@ export class DemoScene extends Phaser.Scene {
         this.gold.update(dt);
         const pct = this.hp.getPercent();
         this.hpFill.width = Math.max(0, Math.round(314 * pct));
-        this.hpText.setText(Math.round(this.hp.get()) + '/' + this.hp.max + ' (regen ' + this.hp.baseRegen + '/s)');
-        this.resInfo.setText('modifiers: ' + Object.keys(this.hp.modifiers).length + ' 个 · gold ' + Math.round(this.gold.get()));
+        this.hpText.setText(Math.round(this.hp.get()) + '/' + this.hp.max + ' (regen ' + this.hp.regenPerSecond + '/s)');
+        this.resInfo.setText('modifiers: ' + this.hp.modifierCount + ' 个 · gold ' + Math.round(this.gold.get()));
 
-        // (2) 状态精灵渲染
+        // (2) 状态渲染
         this.character.updateContext({ hp: this.hp.get(), money: this.gold.get() });
         this.character.update(dt);
         const cur = this.character.getState() ?? 'neutral';
         this.charName.setText('state: ' + cur + (this.character.isTransitioning() ? ' [过渡中]' : ''));
-        let eased = this.character.transitionProgress;
-        if (typeof this.character.transitionEasing === 'function') eased = this.character.transitionEasing(eased);
-        const prev = this.character.previousState;
+        const eased = this.character.getTransitionEasing()(this.character.getTransitionProgress());
+        const prev = this.character.getPreviousState();
         for (const [name, img] of this.charImages) {
             const isCur = name === cur;
             const isPrev = this.character.isTransitioning() && prev != null && name === prev;

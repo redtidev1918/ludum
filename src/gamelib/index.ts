@@ -1,10 +1,11 @@
-// GameLib —— 通用游戏系统库(TS 版,引擎无关,零运行时依赖)
+// ludus —— 通用游戏系统库(TS 版,引擎无关,零运行时依赖)
 // 可按模块单独导入,或从这里统一引入。
 //
 // 模块清单:
 //   ecs.ts            - ECS 实体组件系统(实例化 World + 类型化组件)
-//   resource.ts       - Resource / DerivedResource / ResourceManager 数值资源
-//   stateSprite.ts    - StateSprite / LayeredStateSprite / Easing 状态精灵状态机
+//   resource.ts       - Resource / DerivedResource / ResourceRegistry 数值资源
+//   state-machine.ts   - StateMachine / Easing 状态机
+//   visual-state.ts    - VisualState / VisualStateMap 表现元数据
 //   procShape.ts      - ProcShape / BezierShape 程序化形状(几何 + 弹簧物理)
 //   interactRegion.ts - InteractRegion / InteractRegionManager 交互区域命中检测
 //   dialogue.ts       - DialogueLibrary / DialogueTree 对话系统
@@ -20,7 +21,8 @@ export * from './resource.js';
 export * from './dialogue.js';
 export * from './weighted/table.js';
 export * from './weighted/session.js';
-export * from './stateSprite.js';
+export * from './state-machine.js';
+export * from './visual-state.js';
 export * from './procShape.js';
 export * from './interactRegion.js';
 export * from './runtime/clock.js';
@@ -34,10 +36,10 @@ export * from './condition-expression.js';
 export * from './definition.js';
 export * from './validation.js';
 
-/** GameLib 版本号 */
+/** ludus 版本号 */
 export const VERSION = '3.0.0';
 
-/** GameLib 描述 */
+/** ludus 描述 */
 export const DESCRIPTION = '引擎无关、零运行时依赖的 TypeScript gameplay systems toolkit';
 
 /** 获取版本信息 */
