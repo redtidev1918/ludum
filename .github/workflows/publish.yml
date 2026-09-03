@@ -29,6 +29,11 @@ jobs:
       - name: Validate
         run: npm run check
 
+      - name: Debug OIDC claims
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://registry.npmjs.org" | jq -r .value)
+          echo "$TOKEN" | cut -d. -f2 | python3 -c "import sys,base64; s=sys.stdin.read().strip(); s+='='*(-len(s)%4); print(base64.urlsafe_b64decode(s).decode())" | jq '{sub, iss, aud, repository, repository_owner, workflow_ref, job_workflow_ref, ref, environment}'
+
       - name: Publish
         # Prereleases (3.0.0-alpha.2 -> tag alpha) use their prerelease id; stable uses latest.
         run: |
