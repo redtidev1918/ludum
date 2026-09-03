@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.0-alpha.2
+
+- Add `ShuffleBag<T>` (random draw without replacement) + subpath export.
+- Portable spec (`spec/conventions.md`), `ARCHITECTURE_MAP`, `PORTABILITY`.
+- `examples/headless` deterministic vertical slice; Phaser demo moved to `examples/phaser/`.
+- ECS: mutations on a destroyed entity now throw (was idempotent no-op).
+- Strict TS: `strictPropertyInitialization`, `useUnknownInCatchVariables`, `noUncheckedIndexedAccess`.
+
 ## 3.0.0-alpha.1
 
 - Complete v3 rewrite: engine-independent core (ES2022-only), **zero runtime dependencies**.
