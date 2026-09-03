@@ -10,6 +10,17 @@ JS/TS host (browser, Node, Deno, Bun) with **zero runtime dependencies**.
 ludum is **not** a game engine, renderer, scene framework, physics engine, asset
 pipeline, UI framework, audio framework, networking layer, or service framework.
 
+## Install
+
+```bash
+npm install ludum
+```
+
+```ts
+import { World, Resource, SeededRandom } from "ludum";
+import { World } from "ludum/ecs"; // subpath export, better tree-shaking
+```
+
 ## Architecture
 
 The library is organized into four layers. Breaking changes from v1 are in
