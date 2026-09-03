@@ -1,6 +1,6 @@
 # StateMachine / VisualStateMap —— 状态
 
-GameLib v3 把 v1 的 `StateSprite` / `LayeredStateSprite` 拆分为 gameplay 与 presentation 两层；fake 渲染 API（`draw` / `loadImage` / `preloadImages`）已删除。
+ludum v3 把 v1 的 `StateSprite` / `LayeredStateSprite` 拆分为 gameplay 与 presentation 两层；fake 渲染 API（`draw` / `loadImage` / `preloadImages`）已删除。
 
 ## 核心概念
 

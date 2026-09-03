@@ -1,6 +1,6 @@
 # Geometry —— 几何
 
-ludus v3 的几何层：typed `Shape2D` + 纯命中检测 + `Spring2D` + `ProceduralShape`。v1 的 `ProcShape` / `BezierShape`（几何 + 弹簧 + 颜色混合）已删除。
+ludum v3 的几何层：typed `Shape2D` + 纯命中检测 + `Spring2D` + `ProceduralShape`。v1 的 `ProcShape` / `BezierShape`（几何 + 弹簧 + 颜色混合）已删除。
 
 ## 核心概念
 

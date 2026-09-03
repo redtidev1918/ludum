@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 
-// Phaser 4 + ludus 开发/构建配置,测试复用同一配置(vitest)
+// Phaser 4 + ludum 开发/构建配置,测试复用同一配置(vitest)
 export default defineConfig({
     base: './',
     build: {

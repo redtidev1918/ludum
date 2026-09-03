@@ -1,4 +1,4 @@
-// tests/integration.test.ts — proves ludus is composable, not isolated silos
+// tests/integration.test.ts — proves ludum is composable, not isolated silos
 import { describe, it, expect } from 'vitest';
 import { World, defineComponent } from '../src/gamelib/ecs';
 import { Resource, DerivedResource } from '../src/gamelib/resource';

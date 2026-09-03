@@ -1,13 +1,13 @@
-# ludus
+# ludum
 
 > A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.
 
-ludus provides composable building blocks for gameplay logic — ECS, resources &
+ludum provides composable building blocks for gameplay logic — ECS, resources &
 attributes, modifiers, state machines, dialogue, weighted random selection, pity
 systems, gameplay conditions, geometry, and interaction hit-testing — that run in any
 JS/TS host (browser, Node, Deno, Bun) with **zero runtime dependencies**.
 
-ludus is **not** a game engine, renderer, scene framework, physics engine, asset
+ludum is **not** a game engine, renderer, scene framework, physics engine, asset
 pipeline, UI framework, audio framework, networking layer, or service framework.
 
 ## Architecture
@@ -83,4 +83,4 @@ typecheck. See `docs/adr/0001-engine-independent-core.md`.
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2026 ludus Team.
+[MIT](LICENSE) — Copyright (c) 2026 ludum Team.

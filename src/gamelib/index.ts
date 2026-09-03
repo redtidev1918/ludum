@@ -1,4 +1,4 @@
-// ludus —— 通用游戏系统库(TS 版,引擎无关,零运行时依赖)
+// ludum —— 通用游戏系统库(TS 版,引擎无关,零运行时依赖)
 // 可按模块单独导入,或从这里统一引入。
 //
 // 模块清单:
@@ -39,10 +39,10 @@ export * from './condition-expression.js';
 export * from './definition.js';
 export * from './validation.js';
 
-/** ludus 版本号 */
+/** ludum 版本号 */
 export const VERSION = '3.0.0';
 
-/** ludus 描述 */
+/** ludum 描述 */
 export const DESCRIPTION = '引擎无关、零运行时依赖的 TypeScript gameplay systems toolkit';
 
 /** 获取版本信息 */

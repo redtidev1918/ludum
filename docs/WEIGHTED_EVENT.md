@@ -1,6 +1,6 @@
 # Weighted —— 加权随机选择
 
-ludus v3 的加权选择系统。v1 的 `WeightedEventPool` / `newPool` 已删除。
+ludum v3 的加权选择系统。v1 的 `WeightedEventPool` / `newPool` 已删除。
 
 ## 核心概念
 

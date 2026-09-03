@@ -1,6 +1,6 @@
 # Interaction —— 交互
 
-ludus v3 的交互层：`Shape2D` + `InteractionRegion` + `InteractionRouter`。v1 的 `InteractRegion` / `InteractRegionManager`（`shape: string` + `bounds: number[]` + `mouse*` 命名 + `on(event, any[])`）已删除。
+ludum v3 的交互层：`Shape2D` + `InteractionRegion` + `InteractionRouter`。v1 的 `InteractRegion` / `InteractRegionManager`（`shape: string` + `bounds: number[]` + `mouse*` 命名 + `on(event, any[])`）已删除。
 
 ## 核心概念
 

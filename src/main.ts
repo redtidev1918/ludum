@@ -1,4 +1,4 @@
-// ludus —— Phaser 4 演示启动入口
+// ludum —— Phaser 4 演示启动入口
 import * as Phaser from 'phaser';
 import { DemoScene } from './demo/DemoScene';
 

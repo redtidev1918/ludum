@@ -1,6 +1,6 @@
 # Dialogue —— 对话系统
 
-GameLib v3 的对话是数据驱动的分支对话。v1 的 `DialogueLibrary` / `DialogueTree` / Lua 数组 DSL / 1-based 选项已删除。
+ludum v3 的对话是数据驱动的分支对话。v1 的 `DialogueLibrary` / `DialogueTree` / Lua 数组 DSL / 1-based 选项已删除。
 
 ## 核心概念
 

@@ -1,4 +1,4 @@
-// ludus x Phaser 4 —— 模块集成演示场景
+// ludum x Phaser 4 —— 模块集成演示场景
 // 演示:ECS / Resource / StateSprite / ProcShape / InteractRegion / Dialogue / WeightedEvent
 import * as Phaser from 'phaser';
 import {
@@ -104,7 +104,7 @@ export class DemoScene extends Phaser.Scene {
         this.buildEcsPanel();
         this.buildInput();
 
-        this.logTo('ludus v3.0.0 就绪 —— 7 模块集成演示', C.good);
+        this.logTo('ludum v3.0.0 就绪 —— 7 模块集成演示', C.good);
         this.logTo('悬停 / 点击 / 按住拖拽试试', C.dim);
     }
 
@@ -135,7 +135,7 @@ export class DemoScene extends Phaser.Scene {
     private buildLayout(): void {
         const { width } = this.scale;
         this.add.rectangle(width / 2, 20, width, 40, 0x0d1018).setAlpha(0.9);
-        this.add.text(14, 11, 'ludus x Phaser 4 —— 小通用引擎 · 模块集成演示', { fontFamily: 'Arial', fontSize: '16px', color: '#d7e0f2' });
+        this.add.text(14, 11, 'ludum x Phaser 4 —— 小通用引擎 · 模块集成演示', { fontFamily: 'Arial', fontSize: '16px', color: '#d7e0f2' });
         const v = this.add.text(884, 11, 'v3.0.0', { fontFamily: 'monospace', fontSize: '13px', color: '#7c8db0' });
         v.setOrigin(1, 0);
 
