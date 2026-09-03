@@ -39,7 +39,7 @@ The library is organized into four layers. Breaking changes from v1 are in
 `InteractionRouter`.
 
 **Examples** — consumers of the library:
-Phaser 4 demo (`src/demo/`).
+Phaser 4 demo (`examples/phaser/`).
 
 ## Design principles
 
@@ -80,8 +80,7 @@ src/gamelib/          # the library core (engine-independent, zero runtime deps)
 types/host.d.ts       # minimal host globals (console) allowed in the core
 spec/                 # portable, language-agnostic behavior spec (conventions.md)
 examples/headless/    # deterministic headless vertical slice
-src/demo/             # Phaser 4 example (dev-only)
-src/main.ts           # example entry
+examples/phaser/     # Phaser 4 example (dev-only)
 tests/                # Vitest unit + integration tests
 bench/                # lightweight benchmarks
 docs/                 # module docs + ADRs + ARCHITECTURE_MAP + PORTABILITY + migration-v3.md

@@ -1,6 +1,6 @@
 // ludum —— Phaser 4 演示启动入口
 import * as Phaser from 'phaser';
-import { DemoScene } from './demo/DemoScene';
+import { DemoScene } from './DemoScene';
 
 // 参考:https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {

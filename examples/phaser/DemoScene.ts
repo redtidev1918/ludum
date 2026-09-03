@@ -4,8 +4,8 @@ import * as Phaser from 'phaser';
 import {
     World, defineComponent, Resource, StateMachine, ProceduralShape, Spring2D, InteractionRegion, InteractionRouter,
     DialogueSession, selectLine, formatDialogueText, createWeightedSession, SystemRandom,
-} from '../gamelib';
-import type { VisualStateMap, DialogueDefinition, DialogueLine, Shape2D, Vec2 } from '../gamelib';
+} from '../../src/gamelib';
+import type { VisualStateMap, DialogueDefinition, DialogueLine, Shape2D, Vec2 } from '../../src/gamelib';
 
 const Position = defineComponent({ name: 'Position', defaults: { x: 0, y: 0 } });
 const Velocity = defineComponent({ name: 'Velocity', defaults: { vx: 0, vy: 0 } });
