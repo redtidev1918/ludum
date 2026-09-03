@@ -93,7 +93,7 @@ describe('WeightedSession', () => {
         const stats = session.getStats();
         expect(stats.totalRolls).toBe(2);
         expect(stats.totalTriggers).toBe(2);
-        expect(stats.events.a.count).toBe(2);
+        expect(stats.events.a!.count).toBe(2);
     });
 
     it('forces a guarantee after threshold consecutive misses', () => {

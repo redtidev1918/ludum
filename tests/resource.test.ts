@@ -157,7 +157,7 @@ describe('DerivedResource', () => {
         const tension = new DerivedResource({
             id: 'tension',
             dependencies: { volume, capacity },
-            formula: (deps) => (deps.volume / deps.capacity) * 100,
+            formula: (deps) => (deps.volume! / deps.capacity!) * 100,
             min: 0,
             max: 100,
         });

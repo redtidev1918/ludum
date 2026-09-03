@@ -110,7 +110,7 @@ describe('VisualStateMap', () => {
             idle: { textureKey: 'idle.png' },
             run: { textureKey: 'run.png', scale: 1.5 },
         };
-        expect(map.idle.textureKey).toBe('idle.png');
-        expect(map.run.scale).toBe(1.5);
+        expect(map.idle!.textureKey).toBe('idle.png');
+        expect(map.run!.scale).toBe(1.5);
     });
 });

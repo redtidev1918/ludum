@@ -79,7 +79,7 @@ export function selectWeighted<T>(
     const roll = random.next() * total;
     let cumulative = 0;
     for (let i = 0; i < entries.length; i++) {
-        cumulative += weights[i];
+        cumulative += weights[i]!;
         if (roll < cumulative) return entries[i];
     }
     // Unreachable when total > 0 (roll ∈ [0, total)); kept as a safe fallback.

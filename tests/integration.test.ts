@@ -49,7 +49,7 @@ describe('integration', () => {
         const capacity = new Resource({ id: 'capacity', value: 1000, max: 2000 });
         const tension = new DerivedResource({
             dependencies: { volume, capacity },
-            formula: (deps) => (deps.volume / deps.capacity) * 100,
+            formula: (deps) => (deps.volume! / deps.capacity!) * 100,
             min: 0,
             max: 100,
         });

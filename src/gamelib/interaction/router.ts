@@ -26,7 +26,7 @@ export class InteractionRouter {
 
     pointerDown(input: PointerInput): string | null {
         for (let i = this.order.length - 1; i >= 0; i--) {
-            const id = this.order[i];
+            const id = this.order[i]!;
             const region = this.regions.get(id);
             if (region && region.pointerDown(input)) return id;
         }
@@ -36,7 +36,7 @@ export class InteractionRouter {
     pointerUp(input: PointerInput): string | null {
         let handled: string | null = null;
         for (let i = this.order.length - 1; i >= 0; i--) {
-            const id = this.order[i];
+            const id = this.order[i]!;
             const region = this.regions.get(id);
             if (region && region.pointerUp(input)) handled = id;
         }

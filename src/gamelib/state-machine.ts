@@ -6,7 +6,7 @@ import type { Predicate } from './predicate.js';
 
 export type EasingFunction = (t: number) => number;
 
-export const Easing: Readonly<Record<string, EasingFunction>> = {
+export const Easing = {
     linear: (t) => t,
     inQuad: (t) => t * t,
     outQuad: (t) => t * (2 - t),
@@ -25,7 +25,7 @@ export const Easing: Readonly<Record<string, EasingFunction>> = {
         t -= 2.625 / 2.75;
         return 7.5625 * t * t + 0.984375;
     },
-};
+} satisfies Record<string, EasingFunction>;
 
 export interface StateTransition {
     durationSeconds?: number;
@@ -66,7 +66,7 @@ export class StateMachine<TContext = Record<string, unknown>> {
         if (config.states.length === 0) throw new Error('StateMachine: states must not be empty');
         this.states = new Set(config.states);
         if (this.states.size !== config.states.length) throw new Error('StateMachine: duplicate state names');
-        const initialState = config.initialState ?? config.states[0];
+        const initialState = config.initialState ?? config.states[0]!;
         if (!this.states.has(initialState)) throw new Error(`StateMachine: unknown initialState "${initialState}"`);
         this.initialState = initialState;
         this.currentState = initialState;

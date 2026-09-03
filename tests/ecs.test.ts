@@ -322,7 +322,7 @@ describe('World — snapshot', () => {
         restored.deserialize(snapshot, [Position, Velocity]);
 
         expect(restored.query(Position).length).toBe(2);
-        const player = restored.queryByTag('player')[0];
+        const player = restored.queryByTag('player')[0]!;
         expect(player.get(Position)).toEqual({ x: 10, y: 20 });
         expect(player.get(Velocity)).toEqual({ vx: 0, vy: 0 });
     });
@@ -344,7 +344,7 @@ describe('World — snapshot', () => {
         const snapshot = world.serialize();
         expect(() => JSON.stringify(snapshot)).not.toThrow();
         const reparsed = JSON.parse(JSON.stringify(snapshot)) as WorldSnapshot;
-        expect(reparsed.entities[0].components.Position).toEqual({ x: 1, y: 2 });
+        expect(reparsed.entities[0]!.components.Position).toEqual({ x: 1, y: 2 });
     });
 
     it('rejects an unsupported schemaVersion', () => {

@@ -83,7 +83,7 @@ describe('CompileResult', () => {
         const result = fail<number>([{ path: 'hp.max', code: 'MIN_GT_MAX', message: 'min > max' }]);
         expect(result.ok).toBe(false);
         if (!result.ok) {
-            expect(result.errors[0].code).toBe('MIN_GT_MAX');
+            expect(result.errors[0]!.code).toBe('MIN_GT_MAX');
         }
     });
 });

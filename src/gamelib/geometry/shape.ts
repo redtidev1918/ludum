@@ -34,8 +34,10 @@ export function containsPoint(shape: Shape2D, point: Vec2): boolean {
 function pointInPolygon(point: Vec2, polygon: readonly Vec2[]): boolean {
     let inside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const xi = polygon[i].x, yi = polygon[i].y;
-        const xj = polygon[j].x, yj = polygon[j].y;
+        const pi = polygon[i]!;
+        const pj = polygon[j]!;
+        const xi = pi.x, yi = pi.y;
+        const xj = pj.x, yj = pj.y;
         if (yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi) {
             inside = !inside;
         }

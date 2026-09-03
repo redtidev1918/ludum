@@ -61,7 +61,7 @@ export class SequenceRandom implements RandomSource {
     }
 
     next(): number {
-        const value = this.values[Math.min(this.index, this.values.length - 1)];
+        const value = this.values[Math.min(this.index, this.values.length - 1)]!;
         if (this.index < this.values.length) this.index += 1;
         return value;
     }

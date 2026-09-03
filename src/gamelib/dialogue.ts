@@ -47,7 +47,7 @@ export class DialogueSession<TContext> {
     }
 
     getCurrentNode(): DialogueNode<TContext> | null {
-        return this.currentNodeId != null ? this.definition.nodes[this.currentNodeId] : null;
+        return this.currentNodeId != null ? (this.definition.nodes[this.currentNodeId] ?? null) : null;
     }
 
     getText(): string | null {

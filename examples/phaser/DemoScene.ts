@@ -230,7 +230,7 @@ export class DemoScene extends Phaser.Scene {
         };
 
         for (const name of ['neutral', 'happy', 'critical']) {
-            const img = this.add.image(66, 288, this.visualStates[name].textureKey);
+            const img = this.add.image(66, 288, this.visualStates[name]!.textureKey);
             img.setOrigin(0.5).setScale(1.7).setAlpha(0);
             this.charImages.set(name, img);
         }
