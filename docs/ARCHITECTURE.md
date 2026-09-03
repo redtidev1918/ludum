@@ -1,5 +1,7 @@
 # GameLib 架构设计
 
+> ⚠️ **v1 文档,迁移中**:本文档描述 v1 架构(模块级 ECS 单例、EventBus 等)。v3 已重写 ECS(见 `docs/ECS.md`)并移除 EventBus(见 `docs/EVENT_BUS.md`);权威决策见 `docs/adr/`。本文档将在 Phase 9 全面重写。
+
 本文档说明 GameLib(TS v1.0)的定位、设计原则、模块职责、通用约定,以及与 Phaser 4 的对接模式。
 
 ## 定位:小通用引擎

@@ -1,25 +1,45 @@
 {
   "name": "gamelib",
-  "description": "GameLib - 通用游戏系统库(引擎无关、零运行时依赖)。轻量模块化游戏系统:ECS / 资源 / 状态精灵 / 程序化形状 / 交互区域 / 对话 / 加权事件。",
-  "version": "1.0.0",
-  "private": true,
+  "description": "A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems — ECS, resources & attributes, modifiers, state machines, dialogue, weighted random, geometry, interaction.",
+  "version": "3.0.0",
   "type": "module",
   "license": "MIT",
   "engines": {
     "node": ">=20.19.0"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.lib.json && tsc -p tsconfig.test.json && tsc -p tsconfig.example.json",
+    "build:lib": "rm -rf dist && tsc -p tsconfig.build.json",
     "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "phaser": "4.2.1"
+    "test:watch": "vitest",
+    "test:ecs": "vitest run tests/ecs.test.ts",
+    "test:resource": "vitest run tests/resource.test.ts",
+    "test:dialogue": "vitest run tests/dialogue.test.ts",
+    "test:weighted": "vitest run tests/weighted.test.ts",
+    "test:rules": "vitest run tests/rules.test.ts",
+    "test:state": "vitest run tests/stateSprite.test.ts",
+    "test:geometry": "vitest run tests/procShape.test.ts tests/interactRegion.test.ts",
+    "test:runtime": "vitest run tests/runtime.test.ts",
+    "check": "npm run typecheck && npm test && npm run build:lib"
   },
   "devDependencies": {
+    "phaser": "4.2.1",
     "typescript": "~5.9.3",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"

@@ -1,146 +1,121 @@
-# ECS —— 实体组件系统
+# ECS（实体组件系统）
 
-> 源文件:`src/gamelib/ecs.ts`。模块级单例函数式 API。
+GameLib 3.0 的 ECS 是**实例化、类型安全**的实体组件系统。v1 的模块级单例（`ECS.xxx`）已被删除。
 
-## 概述
+## 核心概念
 
-ECS 提供一套最小化的实体组件系统:组件(Component)、实体(Entity)、系统(System)三要素,外加查询、序列化与重置。所有函数操作模块级私有状态,**全局只有一个 ECS 世界**,通过 `reset()` / `clearRuntime()` 控制生命周期。
+- **`World`**：实体与组件的**唯一所有者**。一个 World 即一个完全隔离的运行时。可同时存在多个 World（例如战斗模拟与预览）。
+- **`Entity`**：轻量 handle，按 `id` 标识，所有操作委托回其 World。Entity 自身不保存权威数据。
+- **`ComponentType<T>`**：类型化的组件定义（名称 + 默认值）。定义可跨 World 共享。
 
-两种调用方式等价:
+## 快速上手
 
-~~~ts
-import { ECS } from './src/gamelib/ecs';        // 聚合对象
-import { defineComponent, createEntity } from './src/gamelib/ecs'; // 具名导入
-~~~
+```ts
+import { World, defineComponent } from './gamelib';
 
-> `Entity`、`ComponentDefinition`、`System` 等**只作为类型导出**(`export type { Entity, ... }`),不能 `new Entity()`,实体实例一律通过 `createEntity()` 获得。
+const Position = defineComponent({ name: 'Position', defaults: { x: 0, y: 0 } });
+const Velocity = defineComponent({ name: 'Velocity', defaults: { vx: 0, vy: 0 } });
 
-## 类型
+const world = new World();
 
-~~~ts
-export interface ComponentDefinition { _name: string; _defaults: Record<string, any>; }
-export interface System {
-    name: string;
-    requires: string[];
-    update?: (entity: Entity, dt: number) => void;
-    onAdd?: (entity: Entity) => void;
-    onRemove?: (entity: Entity) => void;
-    priority: number;   // 越高越先执行
-    enabled: boolean;
-}
-export interface SerializedEntity { id: number; components: Record<string, any>; tags: Record<string, boolean>; }
-export interface SerializedData { entities: Record<string, SerializedEntity>; nextId: number; }
-~~~
-
-## 组件 API
-
-| 方法 | 签名 | 说明 |
-|---|---|---|
-| `defineComponent` | `(name: string, defaults?: Record<string, any>): ComponentDefinition` | 注册组件(含默认值) |
-| `getComponent` | `(name: string): ComponentDefinition \| undefined` | 取组件定义 |
-| `hasComponent` | `(name: string): boolean` | 组件是否已定义 |
-
-## 实体 API
-
-| 方法 | 签名 | 说明 |
-|---|---|---|
-| `createEntity` | `(): Entity` | 创建实体(id 自增) |
-| `getEntity` | `(id: number): Entity \| undefined` | 按 id 取实体 |
-| `destroyEntity` | `(entity: Entity \| number): void` | 销毁实体并通知系统 |
-| `getAllEntities` | `(): Entity[]` | 所有存活实体 |
-| `clearEntities` | `(): void` | 清空实体并重置 id 计数 |
-
-### 实体链式 API(`Entity` 实例)
-
-| 方法 | 签名 | 说明 |
-|---|---|---|
-| `add` | `(componentName: string, data?: Record<string, any>): this` | 加组件(默认值 + data 合并);组件未定义时抛错 |
-| `remove` | `(componentName: string): this` | 移除组件 |
-| `get` | `(componentName: string): any` | 取组件数据(无则 `undefined`) |
-| `has` | `(componentName: string): boolean` | 是否拥有组件 |
-| `tag` | `(tagName: string): this` | 打标签 |
-| `untag` | `(tagName: string): this` | 移除标签 |
-| `hasTag` | `(tagName: string): boolean` | 是否有该标签 |
-| `destroy` | `(): void` | 标记死亡(由 `update()` 统一清理) |
-| `isAlive` | `(): boolean` | 是否存活 |
-
-## 系统 API
-
-| 方法 | 签名 | 说明 |
-|---|---|---|
-| `defineSystem` | `(name: string, requires: string[], updateFn?: (entity, dt) => void): System` | 注册系统;缺省 `priority=0`、`enabled=true` |
-| `getSystem` | `(name: string): System \| undefined` | 取系统 |
-| `setSystemPriority` | `(name: string, priority: number): void` | 设优先级 |
-| `setSystemEnabled` | `(name: string, enabled: boolean): void` | 启用/禁用 |
-| `setSystemCallback` | `(name: string, event: "onAdd" \| "onRemove", cb: (entity) => void): void` | 设回调 |
-
-## 查询 API
-
-| 方法 | 签名 | 说明 |
-|---|---|---|
-| `query` | `(componentNames: string[]): Entity[]` | 拥有**全部**指定组件的存活实体 |
-| `queryByTag` | `(tagName: string): Entity[]` | 拥有指定标签的存活实体 |
-| `each` | `(componentNames: string[], cb: (entity) => void): void` | 查询并遍历 |
-| `reduce` | `(componentNames: string[], cb: (acc, entity) => T, initial: T): T` | 查询并归约 |
-| `count` | `(componentNames: string[]): number` | 命中实体数量 |
-
-## 更新与序列化 API
-
-| 方法 | 签名 | 说明 |
-|---|---|---|
-| `update` | `(dt: number): void` | 按优先级(降序)更新所有启用系统,末尾清理死亡实体 |
-| `updateSystem` | `(name: string, dt: number): void` | 仅更新指定系统 |
-| `serialize` | `(): SerializedData` | 序列化所有存活实体 |
-| `deserialize` | `(data: SerializedData): void` | 清空后按数据还原 |
-| `reset` | `(): void` | 清空实体 + **组件定义 + 系统定义**(彻底重置) |
-| `clearRuntime` | `(): void` | 仅清空运行时实体与缓存,**保留组件/系统定义** |
-
-## 示例
-
-~~~ts
-import { ECS } from './src/gamelib/ecs';
-
-ECS.defineComponent('Position', { x: 0, y: 0 });
-ECS.defineComponent('Velocity', { vx: 0, vy: 0 });
-
-// 系统:按优先级排序执行;缓存按 requires 匹配的实体
-ECS.defineSystem('Move', ['Position', 'Velocity'], (e, dt) => {
-    const p = e.get('Position'), v = e.get('Velocity');
-    p.x += v.vx * dt; p.y += v.vy * dt;
+world.addSystem({
+    name: 'Move',
+    requires: [Position, Velocity],
+    run: (entity, dtSeconds) => {
+        const p = entity.get(Position)!;
+        const v = entity.get(Velocity)!;
+        p.x += v.vx * dtSeconds;
+        p.y += v.vy * dtSeconds;
+    },
 });
 
-// onAdd / onRemove:组件集从「不满足」变为「满足」时触发
-ECS.setSystemCallback('Move', 'onAdd', (e) => console.log('加入移动系统', e.id));
-
-// 链式创建实体
-const e = ECS.createEntity()
-    .add('Position', { x: 100, y: 100 })
-    .add('Velocity', { vx: 50, vy: 0 })
+const e = world.createEntity()
+    .add(Position, { x: 10, y: 20 })
+    .add(Velocity, { vx: 1, vy: 0 })
     .tag('player');
 
-ECS.update(1 / 60);              // 驱动 Move
-const players = ECS.queryByTag('player');
-const totalX = ECS.reduce(['Position', 'Velocity'], (acc, en) => acc + en.get('Position').x, 0);
-const data = ECS.serialize();    // 存档
-ECS.clearRuntime();              // 清实体,保留组件/系统定义
-ECS.deserialize(data);           // 还原
-~~~
+world.update(1 / 60); // 一秒 60 帧
+```
 
-## 注意事项 / 行为细节
+## API
 
-- **调用方式**:模块级单例函数式 API(`ECS.xxx`),同时支持具名导入单个函数。
-- **`update()` 末尾自动清理死亡实体**:`destroy()` 只是标记 `_alive=false`,真正的删除发生在下一次 `update()`(或 `destroyEntity()` 立即删除)。
-- **系统缓存**:`_getSystemEntities` 按组件需求缓存实体列表,实体增删时失效;正常使用无需关心。
-- **`onAdd`/`onRemove` 判定**:`onAdd` 在「新加的组件恰好是 requires 之一且现在满足全部要求」时触发;`onRemove` 在「移除的组件是 requires 之一」时触发(通知发生在组件真正删除之前,故此时仍能读到组件)。
-- **`reset` vs `clearRuntime`**:前者连组件/系统定义一起清空(适合测试 `beforeEach`),后者只清运行时(适合关卡重开时保留 schema)。
+### `defineComponent`
 
-## 系统执行顺序与缓存
+```ts
+const Health = defineComponent({ name: 'Health', defaults: { value: 100, max: 100 } });
+```
 
-- `update(dt)` 先收集「启用且有 `update` 回调」的系统,按 `priority` **降序**排序后逐个执行;同一系统内按其 `requires` 匹配的实体迭代。
-- `_getSystemEntities` 对每个系统缓存匹配实体列表,`cacheValid` 在实体增/删/销毁时全局失效(`_invalidateCache`),保证查询结果新鲜。
-- `updateSystem(name, dt)` 只跑单个系统,适合手动分阶段驱动;同样尊重 `enabled` 与 `update` 是否存在。
+- `T` 由 `defaults` 推断；`entity.get(Health)` 返回 `{ value: number; max: number } | undefined`。
+- `name` 在同一 World 内必须唯一（用于快照序列化）。
 
-## 渲染 / 集成提示
+### `World`
 
-- ECS 只管数据与逻辑,不持有任何渲染对象;上层每帧 `ECS.query([...])` 把组件位置同步到 Phaser `Image`(`DemoScene.ts` 的 `update()` 即如此)。
-- `getAllEntities()` 与 `query()` 都只返回 `_alive === true` 的实体;被 `destroy()` 标记的死亡实体在 `update()` 的清理阶段才从存储移除(演示场景用 `query` 结果驱动图像同步)。
+| 方法 | 说明 |
+|---|---|
+| `createEntity()` | 创建实体，返回 handle |
+| `getEntity(id)` | 按 id 取 handle，不存在返回 `undefined` |
+| `destroyEntity(entity|id)` | 销毁实体（幂等） |
+| `isAlive(id)` | 是否存活 |
+| `clear()` | 清除全部实体并重置 id 计数器（保留系统） |
+| `query(...components)` | 拥有所有给定组件的存活实体；无参返回全部存活实体 |
+| `queryByTag(tag)` | 拥有该标签的存活实体 |
+| `count(...components)` | 匹配实体数量 |
+| `addSystem(config)` | 注册系统 |
+| `update(dtSeconds)` | 运行所有系统（按 phase + order） |
+| `serialize()` / `deserialize(snapshot, components)` | 快照存取 |
+
+### `Entity`（handle）
+
+| 方法 | 说明 |
+|---|---|
+| `add(component, data?)` | 添加/替换组件（`data` 为 `Partial<T>`，覆盖默认值） |
+| `remove(component)` | 移除组件（不存在则 no-op） |
+| `get(component)` | 取组件数据，不存在返回 `undefined` |
+| `has(component)` | 是否拥有组件 |
+| `tag/untag/hasTag` | 标签 |
+| `destroy()` / `isAlive()` | 生命周期 |
+
+> 读取语义统一：缺失时 `get` 返回 `undefined`，`has` / `hasTag` / `isAlive` 返回 `false`；对已销毁/未知实体的写操作是**幂等 no-op**。
+
+## 系统调度
+
+系统按 **phase**（`preUpdate` → `update` → `postUpdate`）运行；同一 phase 内按 **order** 降序（大的先跑，默认 0）。
+
+```ts
+world.addSystem({ name: 'Input', phase: 'preUpdate', run: ... });
+world.addSystem({ name: 'Simulate', run: ... });        // phase 默认 'update'
+world.addSystem({ name: 'Render', phase: 'postUpdate', run: ... });
+```
+
+- `requires: []` 表示该系统对**每个**存活实体运行一次（与 v1 一致）。
+
+## 结构变更语义（重要）
+
+- **`update()` 之外**：create / destroy / add / remove / tag **立即生效**。
+- **`update()` 之内**（系统运行期间）：所有结构变更进入**延迟命令队列**，**tick 结束时统一应用**。因此：
+  - 一个 tick 内，查询与迭代看到的拓扑是**稳定**的；
+  - 系统 A 在同一 tick 里 create / remove / destroy 的结果，系统 B **看不到**，直到 tick 结束。
+
+```ts
+world.addSystem({ name: 'Kill', requires: [], run: (e) => {
+    e.destroy();
+    e.isAlive(); // true —— 销毁被延迟,当前 tick 内仍存活
+} });
+world.update(dt);
+e.isAlive(); // false —— tick 结束后才真正移除
+```
+
+## 快照
+
+```ts
+const snapshot = world.serialize();           // { schemaVersion: 1, nextEntityId, entities: [...] }
+const other = new World();
+other.deserialize(snapshot, [Position, Velocity]); // 组件定义不序列化,由调用方传入
+```
+
+- 快照为**纯 JSON 数据**（含 `schemaVersion`），组件数据按 `name` 键存储。
+- `deserialize` 会校验 `schemaVersion` 与未知/重复组件名。
+
+## 刻意不做
+
+（见 `docs/adr/0003-instance-based-ecs-world.md`）不实现 archetype / SOA、并行调度、job system，也没有组件 add/remove 回调（`onAdd` / `onRemove`）。

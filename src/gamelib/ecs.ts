@@ -1,564 +1,403 @@
 /**
- * Entity-Component System (ECS)
- * 模块级单例:所有函数操作模块级私有状态。
+ * Entity-Component System (ECS) — v3 instance-based core.
+ *
+ * Invariants:
+ * - World is the single owner of all entity state. Entity is a value handle
+ *   (identity by `id`) that delegates to its World.
+ * - Multiple Worlds are fully isolated (no module-level mutable state).
+ * - During `World.update()`, structural mutations (create/destroy/add/remove/tag)
+ *   are deferred to a command queue and applied at the end of the tick, so queries
+ *   and iteration observe a stable topology within a tick.
+ * - Outside `update()`, structural mutations apply immediately.
+ * - Mutations on a destroyed/unknown entity are idempotent no-ops; reads return
+ *   `undefined` / `false`.
+ *
+ * Deliberately out of scope (see docs/adr/0003-instance-based-ecs-world.md):
+ * archetype/SOA storage, parallel scheduling, job systems, and component
+ * add/remove callbacks (onAdd/onRemove).
  */
 
-interface ComponentDefinition {
-  _name: string;
-  _defaults: Record<string, any>;
+/** A typed component definition. Treat as immutable and shareable across Worlds. */
+export interface ComponentType<T> {
+  readonly name: string;
+  readonly defaults: T;
+}
+
+/** Define a typed component. `T` is inferred from `defaults`. */
+export function defineComponent<T>(def: { name: string; defaults: T }): ComponentType<T> {
+    if (typeof def.name !== 'string' || def.name.trim().length === 0) {
+        throw new Error('defineComponent: name must be a non-empty string');
+    }
+    return { name: def.name, defaults: def.defaults };
+}
+
+/** A lightweight handle to an entity owned by a World. Identity is by `id`. */
+export class Entity {
+    readonly id: number;
+    private readonly world: World;
+
+    constructor(world: World, id: number) {
+        this.world = world;
+        this.id = id;
+    }
+
+    /** Add (or replace) a component. During a tick this is deferred to tick end. */
+    add<T>(component: ComponentType<T>, data?: Partial<T>): this {
+        this.world.addComponent(this.id, component, data);
+        return this;
+    }
+
+    /** Remove a component. No-op if absent. */
+    remove(component: ComponentType<unknown>): this {
+        this.world.removeComponent(this.id, component);
+        return this;
+    }
+
+    /** Get component data, or `undefined` if absent. */
+    get<T>(component: ComponentType<T>): T | undefined {
+        return this.world.getComponent(this.id, component);
+    }
+
+    has(component: ComponentType<unknown>): boolean {
+        return this.world.hasComponent(this.id, component);
+    }
+
+    tag(tag: string): this {
+        this.world.addTag(this.id, tag);
+        return this;
+    }
+
+    untag(tag: string): this {
+        this.world.removeTag(this.id, tag);
+        return this;
+    }
+
+    hasTag(tag: string): boolean {
+        return this.world.hasTag(this.id, tag);
+    }
+
+    /** Destroy the entity at the end of the current tick (or immediately outside one). */
+    destroy(): void {
+        this.world.destroyEntity(this.id);
+    }
+
+    isAlive(): boolean {
+        return this.world.isAlive(this.id);
+    }
+}
+
+export type SystemPhase = 'preUpdate' | 'update' | 'postUpdate';
+
+export interface SystemConfig {
+    name: string;
+    requires: readonly ComponentType<unknown>[];
+    /** When the system runs within a tick. Defaults to `'update'`. */
+    phase?: SystemPhase;
+    /** Relative order within a phase (higher runs first). Defaults to 0. */
+    order?: number;
+    run: (entity: Entity, dtSeconds: number) => void;
 }
 
 interface System {
-  name: string;
-  requires: string[];
-  update?: (entity: Entity, dt: number) => void;
-  onAdd?: (entity: Entity) => void;
-  onRemove?: (entity: Entity) => void;
-  priority: number;
-  enabled: boolean;
+    name: string;
+    requires: ComponentType<unknown>[];
+    phase: SystemPhase;
+    order: number;
+    run: (entity: Entity, dtSeconds: number) => void;
 }
 
-interface SerializedEntity {
-  id: number;
-  components: Record<string, any>;
-  tags: Record<string, boolean>;
-}
-
-interface SerializedData {
-  entities: Record<string, SerializedEntity>;
-  nextId: number;
-}
-
-// 组件注册表
-let componentRegistry: Record<string, ComponentDefinition> = {};
-
-// 系统注册表
-let systemRegistry: Record<string, System> = {};
-
-// 实体存储
-let entities: Record<number, Entity> = {};
-let entityIdCounter = 0;
-
-// 系统缓存(按组件需求缓存实体列表)
-let systemEntityCache: Record<string, Entity[]> = {};
-let cacheValid: Record<string, boolean> = {};
-
-// ---------------------------------------------------------------------------
-// Entity
-// ---------------------------------------------------------------------------
-
-class Entity {
-  id: number;
-  components: Record<string, any> = {};
-  tags: Record<string, boolean> = {};
-  _alive = true;
-
-  constructor(id: number) {
-    this.id = id;
-  }
-
-  /** 添加组件 */
-  add(componentName: string, data?: Record<string, any>): this {
-    const compDef = componentRegistry[componentName];
-    if (!compDef) {
-      throw new Error("Component not defined: " + componentName);
-    }
-
-    const compData: Record<string, any> = {};
-    for (const k of Object.keys(compDef._defaults)) {
-      compData[k] = compDef._defaults[k];
-    }
-    if (data != null) {
-      for (const k of Object.keys(data)) {
-        compData[k] = data[k];
-      }
-    }
-
-    this.components[componentName] = compData;
-    _invalidateCache();
-    _notifySystemsAdd(this, componentName);
-
-    return this;
-  }
-
-  /** 移除组件 */
-  remove(componentName: string): this {
-    if (this.components[componentName] != null) {
-      _notifySystemsRemove(this, componentName);
-      delete this.components[componentName];
-      _invalidateCache();
-    }
-    return this;
-  }
-
-  /** 获取组件数据 */
-  get(componentName: string): any {
-    return this.components[componentName];
-  }
-
-  /** 检查是否有组件 */
-  has(componentName: string): boolean {
-    return this.components[componentName] != null;
-  }
-
-  /** 添加标签 */
-  tag(tagName: string): this {
-    this.tags[tagName] = true;
-    return this;
-  }
-
-  /** 移除标签 */
-  untag(tagName: string): this {
-    delete this.tags[tagName];
-    return this;
-  }
-
-  /** 检查是否有标签 */
-  hasTag(tagName: string): boolean {
-    return this.tags[tagName] === true;
-  }
-
-  /** 销毁实体 */
-  destroy(): void {
-    this._alive = false;
-    _invalidateCache();
-  }
-
-  /** 检查实体是否存活 */
-  isAlive(): boolean {
-    return this._alive;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Component API
-// ---------------------------------------------------------------------------
-
-/** 定义组件 */
-export function defineComponent(name: string, defaults?: Record<string, any>): ComponentDefinition {
-  componentRegistry[name] = {
-    _name: name,
-    _defaults: defaults ?? {},
-  };
-  return componentRegistry[name];
-}
-
-/** 获取组件定义 */
-export function getComponent(name: string): ComponentDefinition | undefined {
-  return componentRegistry[name];
-}
-
-/** 检查组件是否已定义 */
-export function hasComponent(name: string): boolean {
-  return componentRegistry[name] != null;
-}
-
-// ---------------------------------------------------------------------------
-// Entity API
-// ---------------------------------------------------------------------------
-
-/** 创建实体 */
-export function createEntity(): Entity {
-  entityIdCounter = entityIdCounter + 1;
-
-  const entity = new Entity(entityIdCounter);
-  entities[entity.id] = entity;
-  return entity;
-}
-
-/** 获取实体 */
-export function getEntity(id: number): Entity | undefined {
-  return entities[id];
-}
-
-/** 销毁实体 */
-export function destroyEntity(entity: Entity | number): void {
-  const id = typeof entity === "number" ? entity : entity.id;
-  const e = entities[id];
-  if (e) {
-    // 通知系统
-    for (const compName of Object.keys(e.components)) {
-      _notifySystemsRemove(e, compName);
-    }
-    e._alive = false;
-    delete entities[id];
-    _invalidateCache();
-  }
-}
-
-/** 获取所有实体 */
-export function getAllEntities(): Entity[] {
-  const result: Entity[] = [];
-  for (const entity of Object.values(entities)) {
-    if (entity._alive) {
-      result.push(entity);
-    }
-  }
-  return result;
-}
-
-/** 清除所有实体 */
-export function clearEntities(): void {
-  entities = {};
-  entityIdCounter = 0;
-  _invalidateCache();
-}
-
-// ---------------------------------------------------------------------------
-// System API
-// ---------------------------------------------------------------------------
-
-/** 定义系统 */
-export function defineSystem(
-  name: string,
-  requires: string[],
-  updateFn?: (entity: Entity, dt: number) => void,
-): System {
-  const system: System = {
-    name,
-    requires: requires ?? [],
-    update: updateFn,
-    onAdd: undefined,
-    onRemove: undefined,
-    priority: 0,
-    enabled: true,
-  };
-
-  systemRegistry[name] = system;
-  cacheValid[name] = false;
-
-  return system;
-}
-
-/** 获取系统 */
-export function getSystem(name: string): System | undefined {
-  return systemRegistry[name];
-}
-
-/** 设置系统优先级 */
-export function setSystemPriority(name: string, priority: number): void {
-  const system = systemRegistry[name];
-  if (system) {
-    system.priority = priority;
-  }
-}
-
-/** 启用/禁用系统 */
-export function setSystemEnabled(name: string, enabled: boolean): void {
-  const system = systemRegistry[name];
-  if (system) {
-    system.enabled = enabled;
-  }
-}
-
-/** 设置系统回调 */
-export function setSystemCallback(
-  name: string,
-  event: "onAdd" | "onRemove",
-  callback: (entity: Entity) => void,
-): void {
-  const system = systemRegistry[name];
-  if (system) {
-    system[event] = callback;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Query API
-// ---------------------------------------------------------------------------
-
-/** 查询拥有指定组件的实体 */
-export function query(componentNames: string[]): Entity[] {
-  const result: Entity[] = [];
-
-  for (const entity of Object.values(entities)) {
-    if (entity._alive) {
-      let hasAll = true;
-      for (const compName of componentNames) {
-        if (entity.components[compName] == null) {
-          hasAll = false;
-          break;
-        }
-      }
-      if (hasAll) {
-        result.push(entity);
-      }
-    }
-  }
-
-  return result;
-}
-
-/** 查询拥有指定标签的实体 */
-export function queryByTag(tagName: string): Entity[] {
-  const result: Entity[] = [];
-  for (const entity of Object.values(entities)) {
-    if (entity._alive && entity.tags[tagName]) {
-      result.push(entity);
-    }
-  }
-  return result;
-}
-
-/** 查询并执行操作 */
-export function each(componentNames: string[], callback: (entity: Entity) => void): void {
-  const ents = query(componentNames);
-  for (const entity of ents) {
-    callback(entity);
-  }
-}
-
-/** 查询并归约 */
-export function reduce<T>(
-  componentNames: string[],
-  callback: (accumulator: T, entity: Entity) => T,
-  initial: T,
-): T {
-  let result = initial;
-  const ents = query(componentNames);
-  for (const entity of ents) {
-    result = callback(result, entity);
-  }
-  return result;
-}
-
-/** 统计拥有指定组件的实体数量 */
-export function count(componentNames: string[]): number {
-  return query(componentNames).length;
-}
-
-// ---------------------------------------------------------------------------
-// Update API
-// ---------------------------------------------------------------------------
-
-/** 更新所有系统 */
-export function update(dt: number): void {
-  // 按优先级排序系统
-  const sortedSystems: System[] = [];
-  for (const system of Object.values(systemRegistry)) {
-    if (system.enabled && system.update) {
-      sortedSystems.push(system);
-    }
-  }
-  sortedSystems.sort((a, b) => b.priority - a.priority);
-
-  // 执行系统更新
-  for (const system of sortedSystems) {
-    const ents = _getSystemEntities(system);
-    for (const entity of ents) {
-      if (entity._alive) {
-        system.update!(entity, dt);
-      }
-    }
-  }
-
-  // 清理死亡实体
-  _cleanupDeadEntities();
-}
-
-/** 更新指定系统 */
-export function updateSystem(name: string, dt: number): void {
-  const system = systemRegistry[name];
-  if (!system || !system.enabled || !system.update) {
-    return;
-  }
-
-  const ents = _getSystemEntities(system);
-  for (const entity of ents) {
-    if (entity._alive) {
-      system.update(entity, dt);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Internal Functions
-// ---------------------------------------------------------------------------
-
-/** @private */
-export function _invalidateCache(): void {
-  for (const name of Object.keys(cacheValid)) {
-    cacheValid[name] = false;
-  }
-}
-
-/** @private */
-export function _getSystemEntities(system: System): Entity[] {
-  const cached = systemEntityCache[system.name];
-  if (cacheValid[system.name] && cached) {
-    return cached;
-  }
-
-  const result = query(system.requires);
-  systemEntityCache[system.name] = result;
-  cacheValid[system.name] = true;
-
-  return result;
-}
-
-/** @private */
-export function _notifySystemsAdd(entity: Entity, componentName: string): void {
-  for (const system of Object.values(systemRegistry)) {
-    if (system.onAdd) {
-      // 检查实体是否现在满足系统要求
-      let hasAll = true;
-      for (const req of system.requires) {
-        if (entity.components[req] == null) {
-          hasAll = false;
-          break;
-        }
-      }
-      if (hasAll) {
-        // 检查是否刚刚满足(之前缺少这个组件)
-        let wasJustAdded = false;
-        for (const req of system.requires) {
-          if (req === componentName) {
-            wasJustAdded = true;
-            break;
-          }
-        }
-        if (wasJustAdded) {
-          system.onAdd(entity);
-        }
-      }
-    }
-  }
-}
-
-/** @private */
-export function _notifySystemsRemove(entity: Entity, componentName: string): void {
-  for (const system of Object.values(systemRegistry)) {
-    if (system.onRemove) {
-      // 检查实体是否之前满足系统要求
-      let hadAll = true;
-      for (const req of system.requires) {
-        if (entity.components[req] == null) {
-          hadAll = false;
-          break;
-        }
-      }
-      if (hadAll) {
-        // 检查是否因为移除这个组件而不再满足
-        let willLose = false;
-        for (const req of system.requires) {
-          if (req === componentName) {
-            willLose = true;
-            break;
-          }
-        }
-        if (willLose) {
-          system.onRemove(entity);
-        }
-      }
-    }
-  }
-}
-
-/** @private */
-export function _cleanupDeadEntities(): void {
-  const toRemove: number[] = [];
-  for (const id of Object.keys(entities)) {
-    if (!entities[Number(id)]._alive) {
-      toRemove.push(Number(id));
-    }
-  }
-  for (const id of toRemove) {
-    delete entities[id];
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Serialization
-// ---------------------------------------------------------------------------
-
-/** 序列化所有实体 */
-export function serialize(): SerializedData {
-  const data: SerializedData = {
-    entities: {},
-    nextId: entityIdCounter,
-  };
-
-  for (const entity of Object.values(entities)) {
-    if (entity._alive) {
-      data.entities[String(entity.id)] = {
-        id: entity.id,
-        components: entity.components,
-        tags: entity.tags,
-      };
-    }
-  }
-
-  return data;
-}
-
-/** 反序列化实体 */
-export function deserialize(data: SerializedData): void {
-  clearEntities();
-
-  entityIdCounter = data.nextId ?? 0;
-
-  for (const entityData of Object.values(data.entities ?? {})) {
-    const entity = new Entity(entityData.id);
-    entity.components = entityData.components ?? {};
-    entity.tags = entityData.tags ?? {};
-    entity._alive = true;
-    entities[entity.id] = entity;
-  }
-
-  _invalidateCache();
-}
-
-// ---------------------------------------------------------------------------
-// Reset
-// ---------------------------------------------------------------------------
-
-/** 重置 ECS(清除所有实体、组件定义和系统) */
-export function reset(): void {
-  entities = {};
-  entityIdCounter = 0;
-  componentRegistry = {};
-  systemRegistry = {};
-  systemEntityCache = {};
-  cacheValid = {};
-}
-
-/** 仅清除运行时数据(保留定义) */
-export function clearRuntime(): void {
-  entities = {};
-  entityIdCounter = 0;
-  systemEntityCache = {};
-  cacheValid = {};
-}
-
-/**
- * ECS 聚合对象:保持 "ECS.xxx" 的调用习惯,
- * 也支持直接具名导入单个函数。
- */
-export const ECS = {
-  defineComponent,
-  getComponent,
-  hasComponent,
-  createEntity,
-  getEntity,
-  destroyEntity,
-  getAllEntities,
-  clearEntities,
-  defineSystem,
-  getSystem,
-  setSystemPriority,
-  setSystemEnabled,
-  setSystemCallback,
-  query,
-  queryByTag,
-  each,
-  reduce,
-  count,
-  update,
-  updateSystem,
-  serialize,
-  deserialize,
-  reset,
-  clearRuntime,
+const PHASE_INDEX: Record<SystemPhase, number> = {
+    preUpdate: 0,
+    update: 1,
+    postUpdate: 2,
 };
 
-export type { Entity, ComponentDefinition, System, SerializedEntity, SerializedData };
+function compareSystems(a: System, b: System): number {
+    const pa = PHASE_INDEX[a.phase];
+    const pb = PHASE_INDEX[b.phase];
+    if (pa !== pb) return pa - pb;
+    return b.order - a.order;
+}
+
+interface EntityStore {
+    components: Map<ComponentType<unknown>, unknown>;
+    tags: Set<string>;
+}
+
+type Command =
+    | { kind: 'create'; id: number }
+    | { kind: 'destroy'; id: number }
+    | { kind: 'add'; id: number; component: ComponentType<unknown>; data: unknown }
+    | { kind: 'remove'; id: number; component: ComponentType<unknown> }
+    | { kind: 'addTag'; id: number; tag: string }
+    | { kind: 'removeTag'; id: number; tag: string };
+
+/** Plain-JSON snapshot of a World's runtime state (see docs/adr/0002). */
+export interface WorldSnapshot {
+    schemaVersion: 1;
+    nextEntityId: number;
+    entities: Array<{
+        id: number;
+        components: Record<string, unknown>;
+        tags: string[];
+    }>;
+}
+
+export class World {
+    private entities = new Map<number, EntityStore>();
+    private nextEntityId = 1;
+    private componentByName = new Map<string, ComponentType<unknown>>();
+    private systems: System[] = [];
+    private executing = false;
+    private pending: Command[] = [];
+
+    // ------------------------------------------------------------------ Entities
+
+    createEntity(): Entity {
+        const id = this.nextEntityId++;
+        this.mutate({ kind: 'create', id });
+        return new Entity(this, id);
+    }
+
+    getEntity(id: number): Entity | undefined {
+        return this.entities.has(id) ? new Entity(this, id) : undefined;
+    }
+
+    destroyEntity(entity: Entity | number): void {
+        const id = typeof entity === 'number' ? entity : entity.id;
+        this.mutate({ kind: 'destroy', id });
+    }
+
+    isAlive(id: number): boolean {
+        return this.entities.has(id);
+    }
+
+    /** Remove all entities and reset the id counter. Systems are retained. */
+    clear(): void {
+        this.entities.clear();
+        this.nextEntityId = 1;
+        this.pending = [];
+    }
+
+    // ------------------------------------------------------------------ Components
+
+    addComponent<T>(id: number, component: ComponentType<T>, data?: Partial<T>): void {
+        this.registerComponent(component);
+        const merged = { ...component.defaults, ...(data ?? {}) } as T;
+        this.mutate({ kind: 'add', id, component, data: merged });
+    }
+
+    removeComponent(id: number, component: ComponentType<unknown>): void {
+        this.mutate({ kind: 'remove', id, component });
+    }
+
+    getComponent<T>(id: number, component: ComponentType<T>): T | undefined {
+        return this.entities.get(id)?.components.get(component) as T | undefined;
+    }
+
+    hasComponent(id: number, component: ComponentType<unknown>): boolean {
+        return this.entities.get(id)?.components.has(component) ?? false;
+    }
+
+    // ------------------------------------------------------------------ Tags
+
+    addTag(id: number, tag: string): void {
+        this.mutate({ kind: 'addTag', id, tag });
+    }
+
+    removeTag(id: number, tag: string): void {
+        this.mutate({ kind: 'removeTag', id, tag });
+    }
+
+    hasTag(id: number, tag: string): boolean {
+        return this.entities.get(id)?.tags.has(tag) ?? false;
+    }
+
+    // ------------------------------------------------------------------ Queries
+
+    /** All alive entities that have every given component. With no arguments, all alive entities. */
+    query(...components: ComponentType<unknown>[]): Entity[] {
+        const result: Entity[] = [];
+        for (const id of this.entities.keys()) {
+            if (this.storeMatches(id, components)) {
+                result.push(new Entity(this, id));
+            }
+        }
+        return result;
+    }
+
+    /** All alive entities carrying the given tag. */
+    queryByTag(tag: string): Entity[] {
+        const result: Entity[] = [];
+        for (const [id, store] of this.entities) {
+            if (store.tags.has(tag)) result.push(new Entity(this, id));
+        }
+        return result;
+    }
+
+    /** Number of alive entities that have every given component. */
+    count(...components: ComponentType<unknown>[]): number {
+        return this.query(...components).length;
+    }
+
+    // ------------------------------------------------------------------ Systems
+
+    addSystem(config: SystemConfig): this {
+        if (typeof config.name !== 'string' || config.name.trim().length === 0) {
+            throw new Error('World.addSystem: name must be a non-empty string');
+        }
+        if (typeof config.run !== 'function') {
+            throw new Error(`World.addSystem: system "${config.name}" requires a run function`);
+        }
+        if (this.systems.some((s) => s.name === config.name)) {
+            throw new Error(`World.addSystem: duplicate system name "${config.name}"`);
+        }
+        this.systems.push({
+            name: config.name,
+            requires: [...config.requires],
+            phase: config.phase ?? 'update',
+            order: config.order ?? 0,
+            run: config.run,
+        });
+        this.systems.sort(compareSystems);
+        return this;
+    }
+
+    /** Run all systems. Structural mutations made during the tick apply at its end. */
+    update(dtSeconds: number): void {
+        if (!Number.isFinite(dtSeconds) || dtSeconds < 0) {
+            throw new Error(`World.update: dtSeconds must be a finite number >= 0, got ${dtSeconds}`);
+        }
+        if (this.executing) {
+            throw new Error('World.update: re-entrant call detected (do not call update from within a system)');
+        }
+
+        this.executing = true;
+        try {
+            for (const phase of ['preUpdate', 'update', 'postUpdate'] as const) {
+                for (const system of this.systems) {
+                    if (system.phase !== phase) continue;
+                    for (const entity of this.query(...system.requires)) {
+                        system.run(entity, dtSeconds);
+                    }
+                }
+            }
+        } finally {
+            this.executing = false;
+        }
+
+        this.applyPending();
+    }
+
+    // ------------------------------------------------------------------ Snapshot
+
+    serialize(): WorldSnapshot {
+        const entities: WorldSnapshot['entities'] = [];
+        for (const [id, store] of this.entities) {
+            const components: Record<string, unknown> = {};
+            for (const [component, data] of store.components) {
+                components[component.name] = data;
+            }
+            entities.push({ id, components, tags: [...store.tags] });
+        }
+        return { schemaVersion: 1, nextEntityId: this.nextEntityId, entities };
+    }
+
+    /**
+     * Replace the World's contents from a snapshot. `components` maps names back to
+     * their definitions (definitions are not serialized).
+     */
+    deserialize(snapshot: WorldSnapshot, components: readonly ComponentType<unknown>[]): void {
+        if (snapshot.schemaVersion !== 1) {
+            throw new Error(`World.deserialize: unsupported schemaVersion ${snapshot.schemaVersion}`);
+        }
+        const byName = new Map<string, ComponentType<unknown>>();
+        for (const component of components) {
+            if (byName.has(component.name)) {
+                throw new Error(`World.deserialize: duplicate component name "${component.name}"`);
+            }
+            byName.set(component.name, component);
+        }
+
+        this.entities.clear();
+        this.pending = [];
+        this.componentByName = byName;
+
+        let maxId = 0;
+        for (const entity of snapshot.entities ?? []) {
+            const store: EntityStore = { components: new Map(), tags: new Set(entity.tags ?? []) };
+            for (const [name, data] of Object.entries(entity.components ?? {})) {
+                const component = byName.get(name);
+                if (!component) {
+                    throw new Error(`World.deserialize: unknown component "${name}"`);
+                }
+                store.components.set(component, data);
+            }
+            this.entities.set(entity.id, store);
+            if (entity.id > maxId) maxId = entity.id;
+        }
+        this.nextEntityId = Math.max(snapshot.nextEntityId ?? 1, maxId + 1);
+    }
+
+    // ------------------------------------------------------------------ Internals
+
+    private registerComponent(component: ComponentType<unknown>): void {
+        const existing = this.componentByName.get(component.name);
+        if (existing === undefined) {
+            this.componentByName.set(component.name, component);
+        } else if (existing !== component) {
+            throw new Error(`World: duplicate component name "${component.name}"`);
+        }
+    }
+
+    private storeMatches(id: number, components: ComponentType<unknown>[]): boolean {
+        const store = this.entities.get(id);
+        if (!store) return false;
+        for (const component of components) {
+            if (!store.components.has(component)) return false;
+        }
+        return true;
+    }
+
+    private mutate(command: Command): void {
+        if (this.executing) {
+            this.pending.push(command);
+        } else {
+            this.apply(command);
+        }
+    }
+
+    private apply(command: Command): void {
+        switch (command.kind) {
+            case 'create':
+                this.entities.set(command.id, { components: new Map(), tags: new Set() });
+                break;
+            case 'destroy':
+                this.entities.delete(command.id);
+                break;
+            case 'add': {
+                const store = this.entities.get(command.id);
+                if (store) store.components.set(command.component, command.data);
+                break;
+            }
+            case 'remove': {
+                this.entities.get(command.id)?.components.delete(command.component);
+                break;
+            }
+            case 'addTag':
+                this.entities.get(command.id)?.tags.add(command.tag);
+                break;
+            case 'removeTag':
+                this.entities.get(command.id)?.tags.delete(command.tag);
+                break;
+        }
+    }
+
+    private applyPending(): void {
+        const commands = this.pending;
+        this.pending = [];
+        for (const command of commands) {
+            this.apply(command);
+        }
+    }
+}

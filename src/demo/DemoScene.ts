@@ -2,10 +2,13 @@
 // 演示:ECS / Resource / StateSprite / ProcShape / InteractRegion / Dialogue / WeightedEvent
 import * as Phaser from 'phaser';
 import {
-    ECS, Resource, StateSprite, ProcShape, InteractRegion, InteractRegionManager,
-    newLibrary, newTree, newPool, EventBus,
+    World, defineComponent, Resource, StateSprite, ProcShape, InteractRegion, InteractRegionManager,
+    newLibrary, newTree, createWeightedSession, SystemRandom,
 } from '../gamelib';
 import type { RegionPoint } from '../gamelib/interactRegion';
+
+const Position = defineComponent({ name: 'Position', defaults: { x: 0, y: 0 } });
+const Velocity = defineComponent({ name: 'Velocity', defaults: { vx: 0, vy: 0 } });
 
 // 调色板
 const C = {
@@ -57,10 +60,6 @@ export class DemoScene extends Phaser.Scene {
     private regionG!: Phaser.GameObjects.Graphics;
     private buttons: UiButton[] = [];
 
-    // EventBus(⑧ 模块间解耦)
-    private bus = new EventBus();
-    private busOnceDone = false;
-
     // Dialogue
     private log!: Phaser.GameObjects.Text;
     private logLines: string[] = [];
@@ -70,11 +69,12 @@ export class DemoScene extends Phaser.Scene {
     private choiceG!: Phaser.GameObjects.Graphics;
     private choiceItems: ChoiceItem[] = [];
 
-    // WeightedEvent
-    private loot!: ReturnType<typeof newPool>;
+    // Weighted
+    private loot!: ReturnType<typeof createWeightedSession>;
     private lootText!: Phaser.GameObjects.Text;
 
     // ECS
+    private world = new World();
     private ecsImages = new Map<number, Phaser.GameObjects.Image>();
     private ecsInfo!: Phaser.GameObjects.Text;
     private ecsSpawnTimer = 0;
@@ -94,10 +94,9 @@ export class DemoScene extends Phaser.Scene {
         this.buildDialoguePanel();
         this.buildLootPanel();
         this.buildEcsPanel();
-        this.buildEventBusPanel();
         this.buildInput();
 
-        this.logTo('GameLib v1.0.0 就绪 —— 8 模块集成演示', C.good);
+        this.logTo('GameLib v3.0.0 就绪 —— 7 模块集成演示', C.good);
         this.logTo('悬停 / 点击 / 按住拖拽试试', C.dim);
     }
 
@@ -129,7 +128,7 @@ export class DemoScene extends Phaser.Scene {
         const { width } = this.scale;
         this.add.rectangle(width / 2, 20, width, 40, 0x0d1018).setAlpha(0.9);
         this.add.text(14, 11, 'GameLib x Phaser 4 —— 小通用引擎 · 模块集成演示', { fontFamily: 'Arial', fontSize: '16px', color: '#d7e0f2' });
-        const v = this.add.text(884, 11, 'v1.0.0', { fontFamily: 'monospace', fontSize: '13px', color: '#7c8db0' });
+        const v = this.add.text(884, 11, 'v3.0.0', { fontFamily: 'monospace', fontSize: '13px', color: '#7c8db0' });
         v.setOrigin(1, 0);
 
         this.panel(12, 44, 340, 168, '(1) Resource  数值资源');
@@ -433,22 +432,21 @@ export class DemoScene extends Phaser.Scene {
 
     // ------------------------------------------------------------------ (6) WeightedEvent
     private buildLootPanel(): void {
-        this.loot = newPool({
-            events: [
+        this.loot = createWeightedSession({
+            entries: [
                 { id: 'common', weight: 75, type: 'item' },
                 { id: 'rare', weight: 20, type: 'item' },
                 { id: 'legendary', weight: 5, type: 'item' },
                 { id: 'curse', weight: 10, type: 'curse' },
             ],
-            pity: { threshold: 8, guarantee: { id: 'legendary' } },
-        });
+        }, new SystemRandom(), { pity: { threshold: 8, guarantee: (e) => e.id === 'legendary' } });
         this.txt(670, 60, '保底:连续 8 次未中传说 -> 必出', C.dim, '10px');
         this.lootText = this.txt(670, 86, '', C.text, '11px');
 
         const btn = new InteractRegion({ shape: 'rect', bounds: [670, 138, 128, 28], interactions: ['click', 'hover'] });
         btn.on('click', () => {
-            const [ok, ev] = this.loot.roll({ baseChance: 1 });
-            if (ok && ev) {
+            const ev = this.loot.roll();
+            if (ev) {
                 const colors: Record<string, string> = { common: '#9aa4bd', rare: '#58c4ff', legendary: '#ffd166', curse: '#ff5f6d' };
                 this.logTo('开箱 -> ' + ev.id + ' (' + ev.type + ')', colors[ev.id] ?? C.text);
             }
@@ -459,23 +457,24 @@ export class DemoScene extends Phaser.Scene {
 
     // ------------------------------------------------------------------ (7) ECS
     private buildEcsPanel(): void {
-        ECS.defineComponent('Position', { x: 0, y: 0 });
-        ECS.defineComponent('Velocity', { vx: 0, vy: 0 });
-
-        ECS.defineSystem('Bounce', ['Position', 'Velocity'], (entity, dt: number) => {
-            const p = entity.get('Position');
-            const v = entity.get('Velocity');
-            const b = this.ecsBounds;
-            p.x += v.vx * dt;
-            p.y += v.vy * dt;
-            if (p.x < b.x + 5) { p.x = b.x + 5; v.vx = Math.abs(v.vx); }
-            if (p.x > b.x + b.w - 5) { p.x = b.x + b.w - 5; v.vx = -Math.abs(v.vx); }
-            if (p.y < b.y + 5) { p.y = b.y + 5; v.vy = Math.abs(v.vy); }
-            if (p.y > b.y + b.h - 5) { p.y = b.y + b.h - 5; v.vy = -Math.abs(v.vy); }
+        this.world.addSystem({
+            name: 'Bounce',
+            requires: [Position, Velocity],
+            run: (entity, dt) => {
+                const p = entity.get(Position)!;
+                const v = entity.get(Velocity)!;
+                const b = this.ecsBounds;
+                p.x += v.vx * dt;
+                p.y += v.vy * dt;
+                if (p.x < b.x + 5) { p.x = b.x + 5; v.vx = Math.abs(v.vx); }
+                if (p.x > b.x + b.w - 5) { p.x = b.x + b.w - 5; v.vx = -Math.abs(v.vx); }
+                if (p.y < b.y + 5) { p.y = b.y + 5; v.vy = Math.abs(v.vy); }
+                if (p.y > b.y + b.h - 5) { p.y = b.y + b.h - 5; v.vy = -Math.abs(v.vy); }
+            },
         });
 
         this.ecsInfo = this.txt(670, 500, '', C.dim, '11px');
-        this.txt(670, 522, '每帧 ECS.update(dt):实体由 Bounce 系统驱动,', C.dim, '10px');
+        this.txt(670, 522, '每帧 World.update(dt):实体由 Bounce 系统驱动,', C.dim, '10px');
         this.txt(670, 538, '金色=带 tag(elite);图像位置随组件同步', C.dim, '10px');
 
         this.addRectButton('e_spawn', 670, 210, 60, 24, '生成', () => {
@@ -483,7 +482,7 @@ export class DemoScene extends Phaser.Scene {
             this.logTo('ECS:手动生成一个实体', C.accent);
         });
         this.addRectButton('e_clear', 738, 210, 60, 24, '清空', () => {
-            for (const e of ECS.getAllEntities()) e.destroy();
+            for (const e of this.world.query()) e.destroy();
             this.logTo('ECS:销毁全部实体(由系统清理)', C.dim);
         });
         this.txt(670, 244, '实体上限 14,每 2~4s 自动生成一个', C.dim, '10px');
@@ -494,9 +493,9 @@ export class DemoScene extends Phaser.Scene {
         const x = b.x + 20 + Math.random() * (b.w - 40);
         const y = b.y + 20 + Math.random() * (b.h - 40);
         const elite = Math.random() < 0.3;
-        const e = ECS.createEntity()
-            .add('Position', { x, y })
-            .add('Velocity', { vx: (Math.random() - 0.5) * 170, vy: (Math.random() - 0.5) * 170 });
+        const e = this.world.createEntity()
+            .add(Position, { x, y })
+            .add(Velocity, { vx: (Math.random() - 0.5) * 170, vy: (Math.random() - 0.5) * 170 });
         if (elite) e.tag('elite');
         const img = this.add.image(x, y, elite ? 'dotGold' : 'dot');
         img.setDepth(1);
@@ -511,25 +510,6 @@ export class DemoScene extends Phaser.Scene {
     }
 
     // ------------------------------------------------------------------ 日志
-    // ------------------------------------------------------------------ ⑧ 事件总线演示
-    private buildEventBusPanel(): void {
-        // 两个不同优先级的监听器 + 一次 once 监听
-        this.bus.on('ping', () => this.logTo('[总线] 低优先级监听器收到 ping', C.dim), 0);
-        this.bus.on('ping', () => this.logTo('[总线] 高优先级监听器收到 ping(先执行)', C.accent), 100);
-        this.bus.once('ping', () => this.logTo('[总线] once 监听器只响应第一次', C.gold));
-        // 资源阈值 → 总线广播(生产/消费解耦)
-        this.bus.on('hp:low', (v: number) => this.logTo('[总线] hp:low 广播,当前 HP=' + Math.round(v), C.danger));
-        this.bus.on('hp:recover', (v: number) => this.logTo('[总线] hp:recover 广播,当前 HP=' + Math.round(v), C.good));
-        this.hp.onThreshold(20, 'below', () => { this.bus.emit('hp:low', this.hp.get()); });
-        this.hp.onThreshold(50, 'above', () => { this.bus.emit('hp:recover', this.hp.get()); });
-
-        this.addRectButton('bus_ping', 828, 536, 100, 22, '总线 ping', () => {
-            this.bus.emit('ping');
-            if (!this.busOnceDone) { this.busOnceDone = true; this.logTo('(once 已触发并自动退订,再点不再出现)', C.dim); }
-        });
-        this.logTo('⑧ 事件总线:点右上「总线 ping」→ 订阅者按优先级响应;HP 跌破 20/回 50 也走总线广播', C.dim);
-    }
-
     private logTo(text: string, _color?: string | number): void {
         this.logLines.push(text);
         if (this.logLines.length > 5) this.logLines.shift();
@@ -590,14 +570,14 @@ export class DemoScene extends Phaser.Scene {
 
         // (7) ECS
         this.ecsSpawnTimer -= dt;
-        if (this.ecsSpawnTimer <= 0 && ECS.count(['Position', 'Velocity']) < 14) {
+        if (this.ecsSpawnTimer <= 0 && this.world.count(Position, Velocity) < 14) {
             this.spawnEntity();
             this.ecsSpawnTimer = 2 + Math.random() * 2.5;
         }
-        ECS.update(dt);
+        this.world.update(dt);
         const alive = new Set<number>();
-        for (const e of ECS.query(['Position', 'Velocity'])) {
-            const p = e.get('Position');
+        for (const e of this.world.query(Position, Velocity)) {
+            const p = e.get(Position)!;
             const img = this.ecsImages.get(e.id);
             if (img) {
                 img.setPosition(p.x, p.y);
@@ -610,7 +590,7 @@ export class DemoScene extends Phaser.Scene {
                 this.ecsImages.delete(id);
             }
         }
-        this.ecsInfo.setText('实体: ' + ECS.getAllEntities().length + '  精英(tag): ' + ECS.queryByTag('elite').length + '   FPS ' + Math.round(this.game.loop.actualFps));
+        this.ecsInfo.setText('实体: ' + this.world.query().length + '  精英(tag): ' + this.world.queryByTag('elite').length + '   FPS ' + Math.round(this.game.loop.actualFps));
     }
 
     private drawBlob(): void {
