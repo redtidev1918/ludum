@@ -1,17 +1,17 @@
-# Architecture Map
+# 架构图 (Architecture Map)
 
-Module → allowed dependencies. Lower layers never import upper layers.
+模块 → 允许的依赖。下层绝不 import 上层。
 
-| Module | Allowed dependencies |
+| 模块 | 允许的依赖 |
 |---|---|
-| runtime (kernel) | stdlib only |
-| predicate · condition-expression · definition · validation · signal (kernel) | stdlib only |
-| ecs | kernel |
-| resource | kernel |
-| state | kernel, predicate |
-| weighted | kernel, predicate |
-| shuffle-bag | kernel (runtime) |
-| geometry | kernel |
-| interaction | kernel (signal), geometry |
-| dialogue | kernel, predicate |
-| examples | all public modules |
+| runtime（内核） | 仅标准库 |
+| predicate · condition-expression · definition · validation · signal（内核） | 仅标准库 |
+| ecs | 内核 |
+| resource | 内核 |
+| state | 内核、predicate |
+| weighted | 内核、predicate |
+| shuffle-bag | 内核（runtime） |
+| geometry | 内核 |
+| interaction | 内核（signal）、geometry |
+| dialogue | 内核、predicate |
+| examples | 所有公共模块 |

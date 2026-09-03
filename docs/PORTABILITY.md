@@ -1,22 +1,21 @@
-# Portability
+# 可移植性 (Portability)
 
-ludum is portable at three levels.
+ludum 在三个层次上是可移植的。
 
-## Tier 1 — Direct TypeScript runtime (first-class)
+## 第一层 —— 直接 TypeScript 运行时（一等支持）
 
-- **Phaser** — reference consumer (rendering / scene / input / audio).
-- **Cocos Creator** — compatibility smoke-test consumer.
-- **Node / headless** — architectural reference.
-- **Browser** — any bundler.
+- **Phaser** —— 参考消费方（渲染 / 场景 / 输入 / 音频）。
+- **Cocos Creator** —— 兼容性冒烟测试消费方。
+- **Node / headless** —— 架构参考。
+- **浏览器** —— 任意打包器。
 
-## Tier 2 — JS runtime bridge
+## 第二层 —— JS 运行时桥接
 
-- GodotJS and similar JS bridges. Works if the bridge runs standard JS modules.
+- GodotJS 及类似的 JS 桥接。只要桥接能运行标准 JS 模块即可。
 
-## Tier 3 — Specification port
+## 第三层 —— 规范移植
 
-- Godot C#, Unity, Unreal, Rust, etc.
+- Godot C#、Unity、Unreal、Rust 等。
 
-Portability is achieved by conforming to `spec/conventions.md` (time / randomness /
-snapshot / condition semantics), **not** by shipping engine adapters. A Tier 3 port
-reuses the specification, not the TypeScript code.
+可移植性是通过符合 `spec/conventions.md`（时间 / 随机 / 快照 / 条件语义）来实现的，
+而**不是**靠发布引擎适配器。第三层的移植复用的是规范，而非 TypeScript 代码。

@@ -1,33 +1,30 @@
-# ludum x Cocos Creator (integration reference)
+# ludum x Cocos Creator（集成参考）
 
-Type-level integration reference showing ludum's pure gameplay systems wired into a
-Cocos Creator 3.x component. ludum owns ALL the gameplay logic (state machine,
-weighted symbol selection, shuffle bag, balance); Cocos owns rendering, input, and
-lifecycle.
+类型层面的集成参考，展示 ludum 的纯玩法系统接入一个 Cocos Creator 3.x 组件。
+ludum 拥有**全部**玩法逻辑（状态机、加权符号选择、shuffle bag、余额）；Cocos 负责
+渲染、输入与生命周期。
 
-## Files
+## 文件
 
-- `ReelLogic.ts` — a `@ccclass` slot-reel controller using
-  `StateMachine` + `WeightedTable` + `ShuffleBag` + `Resource`.
-- `cc.d.ts` — a minimal `cc` type shim so the example typechecks standalone
-  (without the Cocos editor). **Delete it in a real Cocos project.**
+- `ReelLogic.ts` —— 一个 `@ccclass` 老虎机卷轴控制器，使用
+  `StateMachine` + `WeightedTable` + `ShuffleBag` + `Resource`。
+- `cc.d.ts` —— 一个极简 `cc` 类型 shim，让示例能独立 typecheck
+  （无需 Cocos 编辑器）。**在真实 Cocos 项目中删除它。**
 
-## Use in a real Cocos Creator project
+## 在真实 Cocos Creator 项目中使用
 
 1. `npm install ludum`
-2. Copy `ReelLogic.ts` into your project's `assets/` (delete `cc.d.ts`).
-3. Change the import from the relative `../../src/gamelib` path to the package:
+2. 把 `ReelLogic.ts` 复制到你项目的 `assets/`（删除 `cc.d.ts`）。
+3. 把 import 从相对的 `../../src/gamelib` 路径改为包名：
 
    ```ts
    import { Resource, StateMachine, WeightedTable, selectFromTable, ShuffleBag, SystemRandom } from 'ludum';
    ```
 
-4. Attach `ReelLogic` to a node; call `spin()` from a button; read `getState()` in
-   your renderer/animator.
+4. 把 `ReelLogic` 挂到某个节点上；用按钮调用 `spin()`；在你的渲染器/动画器里读 `getState()`。
 
-## Why it matters
+## 为什么重要
 
-This proves the headline claim at the type level: ludum compiles against
-`lib: ["ES2022"]` only, so the same gameplay code runs unchanged in Phaser 4
-(`examples/phaser`), headless Node (`examples/headless`), and Cocos Creator — with
-zero runtime dependencies and no engine imports in the library itself.
+这在类型层面证明了核心主张：ludum 只针对 `lib: ["ES2022"]` 编译，所以同一份玩法
+代码可以原样运行在 Phaser 4（`examples/phaser`）、headless Node（`examples/headless`）
+和 Cocos Creator 中 —— 零运行时依赖，库本身没有任何引擎 import。
