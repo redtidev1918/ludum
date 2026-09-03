@@ -15,6 +15,9 @@ export default defineConfig({
     test: {
         include: ['tests/**/*.test.ts'],
         environment: 'node',
-        reporters: 'dot'
+        reporters: 'dot',
+        benchmark: {
+            include: ['bench/**/*.bench.ts']
+        }
     }
 });

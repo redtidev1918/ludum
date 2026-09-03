@@ -1,7 +1,7 @@
 {
-  "name": "ludus",
+  "name": "@redtidev1918/ludus",
   "description": "ludus — a small, engine-agnostic, deterministic TypeScript toolkit for composable gameplay systems (ECS, resources, state machines, dialogue, weighted selection, geometry, interaction).",
-  "version": "3.0.0",
+  "version": "3.0.0-alpha.1",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -14,10 +14,44 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./ecs": {
+      "types": "./dist/ecs.d.ts",
+      "import": "./dist/ecs.js"
+    },
+    "./resource": {
+      "types": "./dist/resource.d.ts",
+      "import": "./dist/resource.js"
+    },
+    "./state": {
+      "types": "./dist/state-machine.d.ts",
+      "import": "./dist/state-machine.js"
+    },
+    "./dialogue": {
+      "types": "./dist/dialogue.d.ts",
+      "import": "./dist/dialogue.js"
+    },
+    "./weighted": {
+      "types": "./dist/weighted/index.d.ts",
+      "import": "./dist/weighted/index.js"
+    },
+    "./geometry": {
+      "types": "./dist/geometry/index.d.ts",
+      "import": "./dist/geometry/index.js"
+    },
+    "./interaction": {
+      "types": "./dist/interaction/index.d.ts",
+      "import": "./dist/interaction/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "scripts": {
@@ -27,13 +61,14 @@
     "typecheck": "tsc -p tsconfig.lib.json && tsc -p tsconfig.test.json && tsc -p tsconfig.example.json",
     "build:lib": "rm -rf dist && tsc -p tsconfig.build.json",
     "test": "vitest run",
+    "bench": "vitest bench",
     "test:watch": "vitest",
     "test:ecs": "vitest run tests/ecs.test.ts",
     "test:resource": "vitest run tests/resource.test.ts",
     "test:dialogue": "vitest run tests/dialogue.test.ts",
     "test:weighted": "vitest run tests/weighted.test.ts",
     "test:rules": "vitest run tests/rules.test.ts",
-    "test:state": "vitest run tests/stateSprite.test.ts",
+    "test:state": "vitest run tests/state-machine.test.ts",
     "test:geometry": "vitest run tests/geometry.test.ts tests/interaction.test.ts",
     "test:runtime": "vitest run tests/runtime.test.ts",
     "check": "npm run typecheck && npm test && npm run build:lib"
