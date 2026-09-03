@@ -1,5 +1,5 @@
 // ludum x Phaser 4 —— 模块集成演示场景
-// 演示:ECS / Resource / StateSprite / ProcShape / InteractRegion / Dialogue / WeightedEvent
+// 演示:ECS / Resource / StateMachine / ProceduralShape / InteractionRegion / Dialogue / WeightedTable
 import * as Phaser from 'phaser';
 import {
     World, defineComponent, Resource, StateMachine, ProceduralShape, Spring2D, InteractionRegion, InteractionRouter,
@@ -97,7 +97,7 @@ export class DemoScene extends Phaser.Scene {
         this.buildLayout();
         this.buildResourcePanel();
         this.buildCharacterPanel();
-        this.buildProcShapePanel();
+        this.buildProceduralShapePanel();
         this.buildInteractPanel();
         this.buildDialoguePanel();
         this.buildLootPanel();
@@ -140,11 +140,11 @@ export class DemoScene extends Phaser.Scene {
         v.setOrigin(1, 0);
 
         this.panel(12, 44, 340, 168, '(1) Resource  数值资源');
-        this.panel(12, 218, 340, 150, '(2) StateSprite  状态精灵');
-        this.panel(12, 374, 340, 150, '(3) ProcShape  程序化形状');
-        this.panel(364, 44, 280, 228, '(4) InteractRegion  交互区域');
+        this.panel(12, 218, 340, 150, '(2) StateMachine  状态机');
+        this.panel(12, 374, 340, 150, '(3) ProceduralShape  程序化形状');
+        this.panel(364, 44, 280, 228, '(4) InteractionRegion  交互区域');
         this.panel(364, 278, 280, 246, '(5) Dialogue  对话系统');
-        this.panel(656, 44, 292, 132, '(6) WeightedEvent  加权掉落');
+        this.panel(656, 44, 292, 132, '(6) WeightedTable  加权掉落');
         this.panel(656, 182, 292, 352, '(7) ECS  实体组件系统');
         this.panel(12, 530, 936, 98, '事件日志');
         this.log = this.txt(24, 560, '…', C.text, '11px');
@@ -190,7 +190,7 @@ export class DemoScene extends Phaser.Scene {
         this.hpFill = this.add.rectangle(25, 85, 314, 16, C.danger).setOrigin(0, 0);
         this.hpText = this.txt(28, 78, '', '#ffffff', '11px');
         this.resInfo = this.txt(24, 106, '', C.dim, '11px');
-        this.txt(24, 132, '操作(点击按钮=InteractRegion click 事件):', '#7c8db0', '11px');
+        this.txt(24, 132, '操作(点击按钮=InteractionRegion click 事件):', '#7c8db0', '11px');
 
         this.addRectButton('r_hurt', 24, 150, 92, 26, '受伤 -15', () => {
             this.hp.subtract(15);
@@ -254,7 +254,7 @@ export class DemoScene extends Phaser.Scene {
     }
 
     // ------------------------------------------------------------------ (3) Geometry
-    private buildProcShapePanel(): void {
+    private buildProceduralShapePanel(): void {
         this.blob = new ProceduralShape({ kind: 'ellipse', baseWidth: 124, baseHeight: 100, sides: 40 });
         this.blobInfo = this.txt(24, 392, '', C.dim, '11px');
         this.txt(24, 470, '每 2.5s 自动戳 + 点击圆内任意处戳一下', C.dim, '10px');
@@ -273,7 +273,7 @@ export class DemoScene extends Phaser.Scene {
         this.buttons.push({ region: zone, shape: zoneShape, label: '', labelX: 0, labelY: 0 });
     }
 
-    // ------------------------------------------------------------------ (4) InteractRegion
+    // ------------------------------------------------------------------ (4) InteractionRegion
     private buildInteractPanel(): void {
         // 可拖拽方块(drag 事件 + offset 移动)
         const dragShape: Shape2D = { kind: 'rect', x: 18, y: 64, width: 74, height: 46 };
@@ -430,7 +430,7 @@ export class DemoScene extends Phaser.Scene {
         });
     }
 
-    // ------------------------------------------------------------------ (6) WeightedEvent
+    // ------------------------------------------------------------------ (6) WeightedTable
     private buildLootPanel(): void {
         this.loot = createWeightedSession({
             entries: [
