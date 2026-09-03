@@ -60,7 +60,8 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "start": "npm run dev",
+    "start": "vite",
+    "prestart": "node scripts/ensure-installed.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.lib.json && tsc -p tsconfig.test.json && tsc -p tsconfig.example.json",

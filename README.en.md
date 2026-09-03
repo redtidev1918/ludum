@@ -28,10 +28,10 @@ import { World } from "ludum/ecs"; // subpath export, better tree-shaking
 ```bash
 git clone https://github.com/redtidev1918/ludum.git
 cd ludum
-./run-demo.sh          # or: npm install && npm start
+npm start
 ```
 
-The browser opens automatically at http://localhost:5173.
+The browser opens automatically at http://localhost:5173. Works on Windows, macOS, and Linux.
 
 ## Architecture
 
