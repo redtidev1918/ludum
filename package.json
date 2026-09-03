@@ -60,7 +60,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "start": "vite",
+    "start": "vite --open",
     "prestart": "node scripts/ensure-installed.mjs",
     "build": "vite build",
     "preview": "vite preview",
