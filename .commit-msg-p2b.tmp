@@ -1,9 +1,0 @@
-refactor: P2 — throw on destroyed-entity mutation + strict TS flags
-
-- ECS: add/remove/tag/untag on a destroyed entity now throw (was idempotent no-op);
-  destroy stays idempotent; reads stay graceful (get->undefined, has->false)
-- enable strictPropertyInitialization + useUnknownInCatchVariables
-- docs/ECS.md documents the new destroyed-handle semantics
-
-Deferred (would be large diffs, per "don't flip all strict flags at once"):
-noUncheckedIndexedAccess, exactOptionalPropertyTypes
