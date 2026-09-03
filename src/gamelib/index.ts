@@ -10,6 +10,7 @@
 //   interaction/       - InteractionRegion / InteractionRouter 交互命中与分发
 //   dialogue.ts       - DialogueDefinition / DialogueSession / selectLine 对话
 //   weighted/         - WeightedTable / selectWeighted / WeightedSession 加权随机选择
+//   shuffle-bag.ts    - ShuffleBag 无放回随机抽取
 //   runtime/          - Clock / RandomSource / IdGenerator / ValueSource 运行时能力
 //   predicate.ts      - Predicate<T> 纯谓词
 //   signal.ts         - Signal<T> 类型化局部事件
@@ -21,6 +22,7 @@ export * from './resource.js';
 export * from './dialogue.js';
 export * from './weighted/table.js';
 export * from './weighted/session.js';
+export * from './shuffle-bag.js';
 export * from './state-machine.js';
 export * from './visual-state.js';
 export * from './geometry/shape.js';
@@ -40,7 +42,7 @@ export * from './definition.js';
 export * from './validation.js';
 
 /** ludum 版本号 */
-export const VERSION = '3.0.0';
+export const VERSION = '3.0.0-alpha.1';
 
 /** ludum 描述 */
 export const DESCRIPTION = '引擎无关、零运行时依赖的 TypeScript gameplay systems toolkit';

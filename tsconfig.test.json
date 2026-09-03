@@ -5,5 +5,5 @@
     "types": [],
     "noEmit": true
   },
-  "include": ["src/gamelib", "tests", "bench", "types"]
+  "include": ["src/gamelib", "tests", "bench", "examples", "types"]
 }

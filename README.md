@@ -62,6 +62,7 @@ Phaser 4 demo (`src/demo/`).
 | `npm test` | run all unit tests (Vitest) |
 | `npm run build:lib` | build the library (ESM + `.d.ts`) into `dist/` |
 | `npm run bench` | run the lightweight benchmark (regression guard) |
+| `npm run example:headless` | run the deterministic headless vertical slice |
 | `npm run test:ecs` / `test:resource` / `test:dialogue` / `test:weighted` / `test:state` / `test:geometry` / `test:runtime` / `test:rules` | targeted subsystem tests |
 | `npm run dev` | run the Phaser 4 demo (dev only) |
 
@@ -77,11 +78,14 @@ src/gamelib/          # the library core (engine-independent, zero runtime deps)
   interaction/        # InteractionRegion / InteractionRouter
   runtime/            # Clock / RandomSource / IdGenerator / ValueSource / Countdown
 types/host.d.ts       # minimal host globals (console) allowed in the core
+spec/                 # portable, language-agnostic behavior spec (conventions.md)
+examples/headless/    # deterministic headless vertical slice
 src/demo/             # Phaser 4 example (dev-only)
 src/main.ts           # example entry
 tests/                # Vitest unit + integration tests
 bench/                # lightweight benchmarks
-docs/                 # module docs + ADRs + migration-v3.md
+docs/                 # module docs + ADRs + ARCHITECTURE_MAP + PORTABILITY + migration-v3.md
+CHANGELOG.md          # release notes
 tsconfig.{base,lib,test,example,build}.json  # split TypeScript configs
 AGENTS.md             # repository operating contract for agents
 ```

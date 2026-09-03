@@ -46,6 +46,10 @@
       "types": "./dist/runtime/index.d.ts",
       "import": "./dist/runtime/index.js"
     },
+    "./shuffle-bag": {
+      "types": "./dist/shuffle-bag.d.ts",
+      "import": "./dist/shuffle-bag.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -62,6 +66,7 @@
     "build:lib": "rm -rf dist && tsc -p tsconfig.build.json",
     "test": "vitest run",
     "bench": "vitest bench",
+    "example:headless": "tsx examples/headless/main.ts",
     "test:watch": "vitest",
     "test:ecs": "vitest run tests/ecs.test.ts",
     "test:resource": "vitest run tests/resource.test.ts",
@@ -75,6 +80,7 @@
   },
   "devDependencies": {
     "phaser": "4.2.1",
+    "tsx": "^4.23.13",
     "typescript": "~5.9.3",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
