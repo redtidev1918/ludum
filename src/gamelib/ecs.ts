@@ -9,8 +9,8 @@
  *   are deferred to a command queue and applied at the end of the tick, so queries
  *   and iteration observe a stable topology within a tick.
  * - Outside `update()`, structural mutations apply immediately.
- * - Mutations on a destroyed/unknown entity are idempotent no-ops; reads return
- *   `undefined` / `false`.
+ * - Mutations (add/remove/tag/untag) on a destroyed entity throw; reads return
+ *   `undefined` / `false`; destroy is idempotent.
  *
  * Deliberately out of scope (see docs/adr/0003-instance-based-ecs-world.md):
  * archetype/SOA storage, parallel scheduling, job systems, and component
@@ -150,6 +150,7 @@ export class World {
     private systems: System[] = [];
     private executing = false;
     private pending: Command[] = [];
+    private destroyedIds = new Set<number>();
 
     // ------------------------------------------------------------------ Entities
 
@@ -177,17 +178,20 @@ export class World {
         this.entities.clear();
         this.nextEntityId = 1;
         this.pending = [];
+        this.destroyedIds.clear();
     }
 
     // ------------------------------------------------------------------ Components
 
     addComponent<T>(id: number, component: ComponentType<T>, data?: Partial<T>): void {
+        this.assertAlive(id, 'addComponent');
         this.registerComponent(component);
         const merged = { ...component.defaults, ...(data ?? {}) } as T;
         this.mutate({ kind: 'add', id, component, data: merged });
     }
 
     removeComponent(id: number, component: ComponentType<unknown>): void {
+        this.assertAlive(id, 'removeComponent');
         this.mutate({ kind: 'remove', id, component });
     }
 
@@ -202,10 +206,12 @@ export class World {
     // ------------------------------------------------------------------ Tags
 
     addTag(id: number, tag: string): void {
+        this.assertAlive(id, 'addTag');
         this.mutate({ kind: 'addTag', id, tag });
     }
 
     removeTag(id: number, tag: string): void {
+        this.assertAlive(id, 'removeTag');
         this.mutate({ kind: 'removeTag', id, tag });
     }
 
@@ -321,6 +327,7 @@ export class World {
 
         this.entities.clear();
         this.pending = [];
+        this.destroyedIds.clear();
         this.componentByName = byName;
 
         let maxId = 0;
@@ -350,6 +357,12 @@ export class World {
         }
     }
 
+    private assertAlive(id: number, method: string): void {
+        if (this.destroyedIds.has(id)) {
+            throw new Error(`World.${method}: entity #${id} is destroyed`);
+        }
+    }
+
     private storeMatches(id: number, components: ComponentType<unknown>[]): boolean {
         const store = this.entities.get(id);
         if (!store) return false;
@@ -374,6 +387,7 @@ export class World {
                 break;
             case 'destroy':
                 this.entities.delete(command.id);
+                this.destroyedIds.add(command.id);
                 break;
             case 'add': {
                 const store = this.entities.get(command.id);

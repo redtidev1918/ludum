@@ -47,6 +47,20 @@ describe('World — entities', () => {
         expect(e.isAlive()).toBe(false);
         expect(world.query().length).toBe(0);
     });
+
+    it('throws when mutating a destroyed entity, reads stay graceful', () => {
+        const world = new World();
+        const Position = defineComponent({ name: 'Position', defaults: { x: 0 } });
+        const e = world.createEntity().add(Position);
+        e.destroy();
+        expect(() => e.add(Position)).toThrow(/destroyed/);
+        expect(() => e.remove(Position)).toThrow(/destroyed/);
+        expect(() => e.tag('x')).toThrow(/destroyed/);
+        expect(e.isAlive()).toBe(false);
+        expect(e.get(Position)).toBeUndefined();
+        expect(e.has(Position)).toBe(false);
+        expect(() => e.destroy()).not.toThrow();
+    });
 });
 
 describe('World — typed components', () => {

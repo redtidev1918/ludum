@@ -69,13 +69,14 @@ const Health = defineComponent({ name: 'Health', defaults: { value: 100, max: 10
 | 方法 | 说明 |
 |---|---|
 | `add(component, data?)` | 添加/替换组件（`data` 为 `Partial<T>`，覆盖默认值） |
-| `remove(component)` | 移除组件（不存在则 no-op） |
+| `remove(component)` | 移除组件（已销毁则 throw） |
 | `get(component)` | 取组件数据，不存在返回 `undefined` |
 | `has(component)` | 是否拥有组件 |
 | `tag/untag/hasTag` | 标签 |
 | `destroy()` / `isAlive()` | 生命周期 |
 
-> 读取语义统一：缺失时 `get` 返回 `undefined`，`has` / `hasTag` / `isAlive` 返回 `false`；对已销毁/未知实体的写操作是**幂等 no-op**。
+> 读取语义：缺失时 `get` 返回 `undefined`，`has` / `hasTag` / `isAlive` 返回 `false`。
+> 写语义：对**已销毁**实体的 `add` / `remove` / `tag` / `untag` 会 **throw**（可搜索错误）；`destroy()` 幂等（重复调用不抛）。
 
 ## 系统调度
 
