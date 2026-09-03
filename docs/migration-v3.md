@@ -4,7 +4,7 @@ ludum v3 是一次**不向后兼容**的重构：从「Lua/TS 移植(v1)」重�
 
 ## 全局
 
-- 项目改名：ludum → **ludum**；npm scoped 名 `@redtidev1918/ludum`。
+- 项目改名：GameLib → ludus → **ludum**；npm 发布名为非 scope 的 `ludum`（scoped 名 `@redtidev1918/ludus` 已弃用）。
 - runtime dependencies = 0（Phaser 移到 devDependencies）。
 - 核心强制 ES2022-only（`window` / `process` / `Phaser` 直接 typecheck 失败）。
 - 统一验证入口 `npm run check`；library build `npm run build:lib`（ESM + .d.ts）。

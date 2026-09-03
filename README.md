@@ -32,7 +32,7 @@ The library is organized into four layers. Breaking changes from v1 are in
 
 **Gameplay systems** — composable and standalone (no ECS required):
 `World` (ECS) · `Resource` / `DerivedResource` · `StateMachine` · `WeightedTable` /
-`WeightedSession`.
+`WeightedSession` · `ShuffleBag<T>`.
 
 **Optional systems** — higher-level, engine-agnostic:
 `DialogueSession` · `Shape2D` / `ProceduralShape` / `Spring2D` · `InteractionRegion` /

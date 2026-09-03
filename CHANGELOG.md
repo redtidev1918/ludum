@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.0
+
+First stable release of the v3 rewrite. No breaking changes since 3.0.0-alpha.2.
+
+- Publish automation finalized: classic `NPM_TOKEN` auth, tag-gated dist-tags.
+
 ## 3.0.0-alpha.2
 
 - Add `ShuffleBag<T>` (random draw without replacement) + subpath export.
