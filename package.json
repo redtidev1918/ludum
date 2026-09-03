@@ -34,7 +34,7 @@
     "test:weighted": "vitest run tests/weighted.test.ts",
     "test:rules": "vitest run tests/rules.test.ts",
     "test:state": "vitest run tests/stateSprite.test.ts",
-    "test:geometry": "vitest run tests/procShape.test.ts tests/interactRegion.test.ts",
+    "test:geometry": "vitest run tests/geometry.test.ts tests/interaction.test.ts",
     "test:runtime": "vitest run tests/runtime.test.ts",
     "check": "npm run typecheck && npm test && npm run build:lib"
   },

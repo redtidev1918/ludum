@@ -2,11 +2,10 @@
 // 演示:ECS / Resource / StateSprite / ProcShape / InteractRegion / Dialogue / WeightedEvent
 import * as Phaser from 'phaser';
 import {
-    World, defineComponent, Resource, StateMachine, ProcShape, InteractRegion, InteractRegionManager,
+    World, defineComponent, Resource, StateMachine, ProceduralShape, Spring2D, InteractionRegion, InteractionRouter,
     DialogueSession, selectLine, formatDialogueText, createWeightedSession, SystemRandom,
 } from '../gamelib';
-import type { VisualStateMap, DialogueDefinition, DialogueLine } from '../gamelib';
-import type { RegionPoint } from '../gamelib/interactRegion';
+import type { VisualStateMap, DialogueDefinition, DialogueLine, Shape2D, Vec2 } from '../gamelib';
 
 const Position = defineComponent({ name: 'Position', defaults: { x: 0, y: 0 } });
 const Velocity = defineComponent({ name: 'Velocity', defaults: { vx: 0, vy: 0 } });
@@ -27,11 +26,8 @@ const C = {
 };
 
 interface UiButton {
-    region: InteractRegion;
-    /** 命中区域几何(用于绘制):rect -> [x,y,w,h];circle -> [cx,cy,r];polygon -> 用 points */
-    shape: 'rect' | 'circle' | 'polygon';
-    bounds: number[];
-    points?: RegionPoint[];
+    region: InteractionRegion;
+    shape: Shape2D;
     label: string;
     labelX: number;
     labelY: number;
@@ -39,7 +35,7 @@ interface UiButton {
 }
 
 interface ChoiceItem {
-    region: InteractRegion;
+    region: InteractionRegion;
     text: Phaser.GameObjects.Text;
     id: string;
 }
@@ -58,14 +54,15 @@ export class DemoScene extends Phaser.Scene {
     private charImages = new Map<string, Phaser.GameObjects.Image>();
     private charName!: Phaser.GameObjects.Text;
 
-    // ProcShape
-    private blob!: ProcShape;
+    // Geometry
+    private blob!: ProceduralShape;
+    private blobSpring = new Spring2D(90, 12);
     private blobG!: Phaser.GameObjects.Graphics;
     private blobInfo!: Phaser.GameObjects.Text;
     private pokeTimer = 0;
 
-    // InteractRegion
-    private regions = new InteractRegionManager();
+    // Interaction
+    private regions = new InteractionRouter();
     private regionG!: Phaser.GameObjects.Graphics;
     private buttons: UiButton[] = [];
 
@@ -176,11 +173,11 @@ export class DemoScene extends Phaser.Scene {
 
     /** 注册一个矩形 UI 按钮(通用点击控件) */
     private addRectButton(btnId: string, x: number, y: number, w: number, h: number, label: string, onClick: () => void): void {
-        const b = [x, y, w, h];
-        const region = new InteractRegion({ shape: 'rect', bounds: b, interactions: ['click', 'hover'] });
-        region.on('click', onClick);
+        const shape: Shape2D = { kind: 'rect', x, y, width: w, height: h };
+        const region = new InteractionRegion(shape);
+        region.events.subscribe((e) => { if (e.type === 'click') onClick(); });
         this.regions.register(btnId, region);
-        this.buttons.push({ region, shape: 'rect', bounds: b, label, labelX: x + 8, labelY: y + 5 });
+        this.buttons.push({ region, shape, label, labelX: x + 8, labelY: y + 5 });
     }
 
     // ------------------------------------------------------------------ (1) Resource
@@ -256,62 +253,65 @@ export class DemoScene extends Phaser.Scene {
         this.character.onStateChange((oldS, newS) => this.logTo('[状态] ' + oldS + ' -> ' + newS, C.accent));
     }
 
-    // ------------------------------------------------------------------ (3) ProcShape
+    // ------------------------------------------------------------------ (3) Geometry
     private buildProcShapePanel(): void {
-        this.blob = new ProcShape({
-            type: 'ellipse',
-            baseWidth: 124,
-            baseHeight: 100,
-            physics: { jiggle: true, stiffness: 90, damping: 12 },
-        });
-        this.blob.bindParam('scale', this.hp, (v) => 0.55 + (v / 100) * 0.95);
-        this.blob.bindParam('bulge', this.gold, (v) => Math.max(0, (v - 100) / 500));
+        this.blob = new ProceduralShape({ kind: 'ellipse', baseWidth: 124, baseHeight: 100, sides: 40 });
         this.blobInfo = this.txt(24, 392, '', C.dim, '11px');
         this.txt(24, 470, '每 2.5s 自动戳 + 点击圆内任意处戳一下', C.dim, '10px');
-        this.txt(24, 486, 'scale<-HP、bulge<-金币 (bindParam 资源绑定)', C.dim, '10px');
-        this.txt(24, 502, '几何=纯计算,getOutlinePoints() 交给 Phaser 画', C.dim, '10px');
+        this.txt(24, 486, 'scale<-HP、bulge<-金币 (每帧读资源值传入 generate)', C.dim, '10px');
+        this.txt(24, 502, '几何=纯计算,generate() 交给 Phaser 画', C.dim, '10px');
 
-        // 命中区域:用 ProcShape.contains 的等价命中(圆)
-        const zone = new InteractRegion({ shape: 'circle', bounds: [182, 449, 70], interactions: ['click'] });
-        zone.on('click', (x: number, y: number) => {
-            this.blob.poke(x - 182, y - 449, 1);
-            this.logTo('戳了一下 blob!', C.warn);
+        const zoneShape: Shape2D = { kind: 'circle', center: { x: 182, y: 449 }, radius: 70 };
+        const zone = new InteractionRegion(zoneShape);
+        zone.events.subscribe((e) => {
+            if (e.type === 'click') {
+                this.blobSpring.applyImpulse(e.position.x - 182, e.position.y - 449);
+                this.logTo('戳了一下 blob!', C.warn);
+            }
         });
         this.regions.register('blobZone', zone);
-        this.buttons.push({ region: zone, shape: 'circle', bounds: [182, 449, 70], label: '', labelX: 0, labelY: 0 });
+        this.buttons.push({ region: zone, shape: zoneShape, label: '', labelX: 0, labelY: 0 });
     }
 
     // ------------------------------------------------------------------ (4) InteractRegion
     private buildInteractPanel(): void {
         // 可拖拽方块(drag 事件 + offset 移动)
-        const dragBox = new InteractRegion({
-            shape: 'rect', bounds: [18, 64, 74, 46], interactions: ['click', 'hover', 'drag'],
-        });
-        dragBox.on('drag', (_x: number, _y: number, _phase: string, _sub: string | null, dx: number, dy: number) => {
-            if (dx || dy) dragBox.setOffset(dragBox.offset.x + dx, dragBox.offset.y + dy);
+        const dragShape: Shape2D = { kind: 'rect', x: 18, y: 64, width: 74, height: 46 };
+        const dragBox = new InteractionRegion(dragShape);
+        dragBox.events.subscribe((e) => {
+            if (e.type === 'drag' && e.phase === 'move') {
+                const o = dragBox.getOffset();
+                dragBox.setOffset(o.x + e.delta.x, o.y + e.delta.y);
+            }
         });
         this.regions.register('dragBox', dragBox);
-        this.buttons.push({ region: dragBox, shape: 'rect', bounds: [18, 64, 74, 46], label: '可拖拽', labelX: 28, labelY: 78 });
+        this.buttons.push({ region: dragBox, shape: dragShape, label: '可拖拽', labelX: 28, labelY: 78 });
 
         // 圆形按钮(回血)
-        const heal = new InteractRegion({ shape: 'circle', bounds: [196, 120, 34], interactions: ['click', 'hover'] });
-        heal.on('click', () => {
-            this.hp.add(10);
-            this.logTo('圆形区域点击:回血 +10', C.good);
+        const healShape: Shape2D = { kind: 'circle', center: { x: 196, y: 120 }, radius: 34 };
+        const heal = new InteractionRegion(healShape);
+        heal.events.subscribe((e) => {
+            if (e.type === 'click') {
+                this.hp.add(10);
+                this.logTo('圆形区域点击:回血 +10', C.good);
+            }
         });
         this.regions.register('healCircle', heal);
-        this.buttons.push({ region: heal, shape: 'circle', bounds: [196, 120, 34], label: '回血', labelX: 183, labelY: 116 });
+        this.buttons.push({ region: heal, shape: healShape, label: '回血', labelX: 183, labelY: 116 });
 
         // 多边形区域(三角形,射线法命中)
-        const tri: RegionPoint[] = [{ x: -30, y: 26 }, { x: 0, y: -28 }, { x: 30, y: 26 }];
-        const pokeTri = new InteractRegion({ shape: 'polygon', bounds: [], points: tri, interactions: ['click', 'hover'] });
+        const tri: Vec2[] = [{ x: -30, y: 26 }, { x: 0, y: -28 }, { x: 30, y: 26 }];
+        const triShape: Shape2D = { kind: 'polygon', points: tri };
+        const pokeTri = new InteractionRegion(triShape);
         pokeTri.setOffset(268, 156);
-        pokeTri.on('click', () => {
-            this.blob.poke((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 40, 1);
-            this.logTo('多边形(三角形)命中:随机戳 blob', C.warn);
+        pokeTri.events.subscribe((e) => {
+            if (e.type === 'click') {
+                this.blobSpring.applyImpulse((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 40);
+                this.logTo('多边形(三角形)命中:随机戳 blob', C.warn);
+            }
         });
         this.regions.register('pokeTri', pokeTri);
-        this.buttons.push({ region: pokeTri, shape: 'polygon', bounds: [], points: tri, label: '戳Blob', labelX: 268 - 22, labelY: 156 - 14 });
+        this.buttons.push({ region: pokeTri, shape: triShape, label: '戳Blob', labelX: 268 - 22, labelY: 156 - 14 });
 
         this.txt(24, 220, 'hover 进入/离开 -> 颜色变化 (enter/leave)', C.dim, '10px');
         this.txt(24, 238, '按住方块拖动 -> drag 事件,setOffset 移动区域', C.dim, '10px');
@@ -401,10 +401,12 @@ export class DemoScene extends Phaser.Scene {
         const choices = this.tree.getChoices();
         // 无选项的节点提供 [继续]
         if (choices.length === 0) {
-            const region = new InteractRegion({ shape: 'rect', bounds: [378, 136, 250, 22], interactions: ['click'] });
-            region.on('click', () => {
-                this.tree.continue();
-                this.refreshTree();
+            const region = new InteractionRegion({ kind: 'rect', x: 378, y: 136, width: 250, height: 22 });
+            region.events.subscribe((e) => {
+                if (e.type === 'click') {
+                    this.tree.continue();
+                    this.refreshTree();
+                }
             });
             const id = 'choice_cont';
             this.regions.register(id, region);
@@ -414,10 +416,12 @@ export class DemoScene extends Phaser.Scene {
         }
         choices.forEach((choice, i) => {
             const y = 138 + i * 30;
-            const region = new InteractRegion({ shape: 'rect', bounds: [378, y, 250, 26], interactions: ['click', 'hover'] });
-            region.on('click', () => {
-                this.tree.choose(choice.id);
-                this.refreshTree();
+            const region = new InteractionRegion({ kind: 'rect', x: 378, y, width: 250, height: 26 });
+            region.events.subscribe((e) => {
+                if (e.type === 'click') {
+                    this.tree.choose(choice.id);
+                    this.refreshTree();
+                }
             });
             const id = 'choice_' + choice.id;
             this.regions.register(id, region);
@@ -439,8 +443,10 @@ export class DemoScene extends Phaser.Scene {
         this.txt(670, 60, '保底:连续 8 次未中传说 -> 必出', C.dim, '10px');
         this.lootText = this.txt(670, 86, '', C.text, '11px');
 
-        const btn = new InteractRegion({ shape: 'rect', bounds: [670, 138, 128, 28], interactions: ['click', 'hover'] });
-        btn.on('click', () => {
+        const btnShape: Shape2D = { kind: 'rect', x: 670, y: 138, width: 128, height: 28 };
+        const btn = new InteractionRegion(btnShape);
+        btn.events.subscribe((e) => {
+            if (e.type !== 'click') return;
             const ev = this.loot.roll();
             if (ev) {
                 const colors: Record<string, string> = { common: '#9aa4bd', rare: '#58c4ff', legendary: '#ffd166', curse: '#ff5f6d' };
@@ -448,7 +454,7 @@ export class DemoScene extends Phaser.Scene {
             }
         });
         this.regions.register('lootBtn', btn);
-        this.buttons.push({ region: btn, shape: 'rect', bounds: [670, 138, 128, 28], label: '开 箱', labelX: 706, labelY: 144 });
+        this.buttons.push({ region: btn, shape: btnShape, label: '开 箱', labelX: 706, labelY: 144 });
     }
 
     // ------------------------------------------------------------------ (7) ECS
@@ -500,9 +506,9 @@ export class DemoScene extends Phaser.Scene {
 
     // ------------------------------------------------------------------ 输入桥接
     private buildInput(): void {
-        this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.regions.mousepressed(p.x, p.y, 0));
-        this.input.on('pointerup', (p: Phaser.Input.Pointer) => this.regions.mousereleased(p.x, p.y, 0));
-        this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.regions.mousemoved(p.x, p.y));
+        this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.regions.pointerDown({ pointerId: p.id, position: { x: p.x, y: p.y }, button: 0 }));
+        this.input.on('pointerup', (p: Phaser.Input.Pointer) => this.regions.pointerUp({ position: { x: p.x, y: p.y }, button: 0 }));
+        this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.regions.pointerMove({ position: { x: p.x, y: p.y } }));
     }
 
     // ------------------------------------------------------------------ 日志
@@ -541,13 +547,13 @@ export class DemoScene extends Phaser.Scene {
             else if (isPrev) img.setAlpha(0.8 * (1 - eased));
         }
 
-        // (3) ProcShape
+        // (3) Geometry
         this.pokeTimer -= dt;
         if (this.pokeTimer <= 0) {
-            this.blob.poke((Math.random() - 0.5) * 70, (Math.random() - 0.5) * 50, 0.6);
+            this.blobSpring.applyImpulse((Math.random() - 0.5) * 70, (Math.random() - 0.5) * 50);
             this.pokeTimer = 2.5;
         }
-        this.blob.update(dt);
+        this.blobSpring.update(dt);
         this.drawBlob();
 
         // (4) 交互区域可视化
@@ -592,20 +598,17 @@ export class DemoScene extends Phaser.Scene {
         const g = this.blobG;
         g.clear();
         const cx = 182, cy = 449;
-        const pts = this.blob.getOutlinePoints(40);
+        const scale = 0.55 + (this.hp.get() / 100) * 0.95;
+        const bulge = Math.max(0, (this.gold.get() - 100) / 500);
+        const pts = this.blob.generate({ scale, bulge, displacement: this.blobSpring.position });
         if (pts.length < 3) return;
         const v: Phaser.Math.Vector2[] = pts.map((p) => new Phaser.Math.Vector2(cx + p.x, cy + p.y));
-        const fc = this.blob.fillColor;
-        const [fr, fg, fb] = fc;
-        g.fillStyle(((fr * 255) << 16) + ((fg * 255) << 8) + (fb * 255), fc[3] ?? 1);
-        g.fillPoints(v, true);
-        const lc = this.blob.color;
-        g.lineStyle(2, ((lc[0] * 255) << 16) + ((lc[1] * 255) << 8) + (lc[2] * 255), lc[3] ?? 1);
-        g.strokePoints(v, true, true);
+        g.fillStyle(0x8fb7ff, 1).fillPoints(v, true);
+        g.lineStyle(2, 0xffffff, 1).strokePoints(v, true, true);
         g.fillStyle(0x10141f, 1).fillCircle(cx - 15, cy - 5, 3).fillCircle(cx + 15, cy - 5, 3);
 
-        const [sw] = this.blob.getSize();
-        const disp = this.blob.physics.displacement;
+        const [sw] = this.blob.getSize({ scale });
+        const disp = this.blobSpring.position;
         this.blobInfo.setText('size ' + Math.round(sw) + '  disp ' + disp.x.toFixed(1) + ',' + disp.y.toFixed(1) + '  点此/自动戳动');
     }
 
@@ -615,23 +618,11 @@ export class DemoScene extends Phaser.Scene {
         for (const btn of this.buttons) {
             const r = btn.region;
             let color = C.idle;
-            if (r.state.isDragging) color = C.pressed;
-            else if (r.state.isPressed) color = C.pressed;
-            else if (r.state.isHovered) color = C.hover;
+            if (r.isDragging) color = C.pressed;
+            else if (r.isPressed) color = C.pressed;
+            else if (r.isHovered) color = C.hover;
             g.fillStyle(color, 0.95);
-            const ox = r.offset.x, oy = r.offset.y;
-            if (btn.shape === 'rect') {
-                g.fillRoundedRect(ox + btn.bounds[0], oy + btn.bounds[1], btn.bounds[2], btn.bounds[3], 4);
-            } else if (btn.shape === 'circle') {
-                g.fillCircle(ox + btn.bounds[0], oy + btn.bounds[1], btn.bounds[2]);
-            } else if (btn.shape === 'polygon' && btn.points) {
-                const v: Phaser.Math.Vector2[] = btn.points.map((p) => {
-                    const px = Array.isArray(p) ? p[0] : p.x;
-                    const py = Array.isArray(p) ? p[1] : p.y;
-                    return new Phaser.Math.Vector2(ox + px, oy + py);
-                });
-                g.fillPoints(v, true);
-            }
+            this.drawShape(g, btn.shape, r.getOffset());
         }
         // 标签文本:仅在缺失时创建一次
         for (const btn of this.buttons) {
@@ -643,16 +634,34 @@ export class DemoScene extends Phaser.Scene {
         }
     }
 
+    private drawShape(g: Phaser.GameObjects.Graphics, shape: Shape2D, offset: Vec2): void {
+        const ox = offset.x, oy = offset.y;
+        if (shape.kind === 'rect') {
+            g.fillRoundedRect(ox + shape.x, oy + shape.y, shape.width, shape.height, 4);
+        } else if (shape.kind === 'circle') {
+            g.fillCircle(ox + shape.center.x, oy + shape.center.y, shape.radius);
+        } else if (shape.kind === 'ellipse') {
+            g.fillEllipse(ox + shape.center.x, oy + shape.center.y, shape.radiusX * 2, shape.radiusY * 2);
+        } else {
+            const v = shape.points.map((p) => new Phaser.Math.Vector2(ox + p.x, oy + p.y));
+            g.fillPoints(v, true);
+        }
+    }
+
     private drawChoiceBoxes(): void {
         const g = this.choiceG;
         g.clear();
         for (const item of this.choiceItems) {
             const r = item.region;
             let color = C.idle;
-            if (r.state.isPressed) color = C.pressed;
-            else if (r.state.isHovered) color = C.hover;
-            g.fillStyle(color, 0.95).fillRoundedRect(r.bounds[0], r.bounds[1], r.bounds[2], r.bounds[3], 4);
-            g.lineStyle(1, C.panelBorder, 1).strokeRoundedRect(r.bounds[0], r.bounds[1], r.bounds[2], r.bounds[3], 4);
+            if (r.isPressed) color = C.pressed;
+            else if (r.isHovered) color = C.hover;
+            const shape = r.getShape();
+            g.fillStyle(color, 0.95);
+            if (shape.kind === 'rect') {
+                g.fillRoundedRect(shape.x, shape.y, shape.width, shape.height, 4);
+                g.lineStyle(1, C.panelBorder, 1).strokeRoundedRect(shape.x, shape.y, shape.width, shape.height, 4);
+            }
         }
     }
 

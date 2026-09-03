@@ -1,0 +1,13 @@
+refactor: P2 (Geometry/Interaction v3)
+
+Geometry:
+- typed Shape2D (rect/circle/ellipse/polygon) + pure containsPoint
+- Spring2D (independent damped-spring simulation)
+- ProceduralShape (params -> outline points); remove ProcShape/BezierShape
+  (geometry + spring + color mixing + fake draw API)
+
+Interaction:
+- InteractionRegion + InteractionRouter; typed PointerInput + InteractionEvent
+  (discriminated union emitted via a local Signal)
+- engine-neutral pointerDown/pointerUp/pointerMove (no LÖVE mouse* naming)
+- remove shape:string + bounds:number[] and on(event, any[]) protocols

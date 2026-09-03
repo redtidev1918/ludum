@@ -6,9 +6,9 @@
 //   resource.ts       - Resource / DerivedResource / ResourceRegistry 数值资源
 //   state-machine.ts   - StateMachine / Easing 状态机
 //   visual-state.ts    - VisualState / VisualStateMap 表现元数据
-//   procShape.ts      - ProcShape / BezierShape 程序化形状(几何 + 弹簧物理)
-//   interactRegion.ts - InteractRegion / InteractRegionManager 交互区域命中检测
-//   dialogue.ts       - DialogueLibrary / DialogueTree 对话系统
+//   geometry/         - Shape2D / containsPoint / Spring2D / ProceduralShape 几何
+//   interaction/       - InteractionRegion / InteractionRouter 交互命中与分发
+//   dialogue.ts       - DialogueDefinition / DialogueSession / selectLine 对话
 //   weighted/         - WeightedTable / selectWeighted / WeightedSession 加权随机选择
 //   runtime/          - Clock / RandomSource / IdGenerator / ValueSource 运行时能力
 //   predicate.ts      - Predicate<T> 纯谓词
@@ -23,8 +23,11 @@ export * from './weighted/table.js';
 export * from './weighted/session.js';
 export * from './state-machine.js';
 export * from './visual-state.js';
-export * from './procShape.js';
-export * from './interactRegion.js';
+export * from './geometry/shape.js';
+export * from './geometry/spring.js';
+export * from './geometry/procedural-shape.js';
+export * from './interaction/region.js';
+export * from './interaction/router.js';
 export * from './runtime/clock.js';
 export * from './runtime/random.js';
 export * from './runtime/id-generator.js';
