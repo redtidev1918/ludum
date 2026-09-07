@@ -288,6 +288,9 @@ export class World {
                     }
                 }
             }
+        } catch (error) {
+            this.pending = [];
+            throw error;
         } finally {
             this.executing = false;
         }
@@ -314,8 +317,17 @@ export class World {
      * their definitions (definitions are not serialized).
      */
     deserialize(snapshot: WorldSnapshot, components: readonly ComponentType<unknown>[]): void {
+        if (this.executing) {
+            throw new Error('World.deserialize: cannot deserialize during update');
+        }
         if (snapshot.schemaVersion !== 1) {
             throw new Error(`World.deserialize: unsupported schemaVersion ${snapshot.schemaVersion}`);
+        }
+        if (!Number.isSafeInteger(snapshot.nextEntityId) || snapshot.nextEntityId < 1) {
+            throw new Error(`World.deserialize: invalid nextEntityId ${snapshot.nextEntityId}`);
+        }
+        if (!Array.isArray(snapshot.entities)) {
+            throw new Error('World.deserialize: entities must be an array');
         }
         const byName = new Map<string, ComponentType<unknown>>();
         for (const component of components) {
@@ -325,14 +337,16 @@ export class World {
             byName.set(component.name, component);
         }
 
-        this.entities.clear();
-        this.pending = [];
-        this.destroyedIds.clear();
-        this.componentByName = byName;
-
+        const entities = new Map<number, EntityStore>();
         let maxId = 0;
-        for (const entity of snapshot.entities ?? []) {
-            const store: EntityStore = { components: new Map(), tags: new Set(entity.tags ?? []) };
+        for (const entity of snapshot.entities) {
+            if (!Number.isSafeInteger(entity.id) || entity.id < 1 || entities.has(entity.id)) {
+                throw new Error(`World.deserialize: invalid or duplicate entity id ${entity.id}`);
+            }
+            if (!Array.isArray(entity.tags) || entity.tags.some((tag) => typeof tag !== 'string')) {
+                throw new Error(`World.deserialize: entity #${entity.id} has invalid tags`);
+            }
+            const store: EntityStore = { components: new Map(), tags: new Set(entity.tags) };
             for (const [name, data] of Object.entries(entity.components ?? {})) {
                 const component = byName.get(name);
                 if (!component) {
@@ -340,10 +354,14 @@ export class World {
                 }
                 store.components.set(component, data);
             }
-            this.entities.set(entity.id, store);
+            entities.set(entity.id, store);
             if (entity.id > maxId) maxId = entity.id;
         }
-        this.nextEntityId = Math.max(snapshot.nextEntityId ?? 1, maxId + 1);
+        this.entities = entities;
+        this.nextEntityId = Math.max(snapshot.nextEntityId, maxId + 1);
+        this.componentByName = byName;
+        this.pending = [];
+        this.destroyedIds.clear();
     }
 
     // ------------------------------------------------------------------ Internals

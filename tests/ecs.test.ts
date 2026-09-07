@@ -271,6 +271,24 @@ describe('World — structural mutation policy', () => {
         expect(world.getEntity(spawnedId)).toBeUndefined();
         expect(world.query().length).toBe(1); // only the Driver remains
     });
+
+    it('discards deferred mutations when a system throws', () => {
+        const world = new World();
+        const Driver = defineComponent({ name: 'Driver', defaults: {} });
+        const e = world.createEntity().add(Driver).add(Position);
+        let shouldThrow = true;
+        world.addSystem({ name: 'FailOnce', requires: [Driver], run: () => {
+            if (shouldThrow) {
+                shouldThrow = false;
+                e.remove(Position);
+                throw new Error('boom');
+            }
+        } });
+
+        expect(() => world.update(0.1)).toThrow(/boom/);
+        world.update(0.1);
+        expect(e.has(Position)).toBe(true);
+    });
 });
 
 describe('World — validation', () => {
@@ -355,11 +373,13 @@ describe('World — snapshot', () => {
 
     it('rejects an unknown component name', () => {
         const world = new World();
+        world.createEntity().add(Position);
         const snapshot: WorldSnapshot = {
             schemaVersion: 1,
             nextEntityId: 1,
             entities: [{ id: 1, components: { Nope: { x: 1 } }, tags: [] }],
         };
         expect(() => world.deserialize(snapshot, [])).toThrow(/unknown component/);
+        expect(world.count(Position)).toBe(1);
     });
 });

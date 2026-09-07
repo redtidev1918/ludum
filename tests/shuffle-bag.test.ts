@@ -43,6 +43,11 @@ describe('ShuffleBag', () => {
         expect(restored.snapshot()).toEqual(snapshot);
     });
 
+    it('rejects items outside the original bag', () => {
+        const bag = new ShuffleBag(['a'], new SequenceRandom([0]));
+        expect(() => bag.restore(['b'])).toThrow(/subset/);
+    });
+
     it('rejects an empty item set', () => {
         expect(() => new ShuffleBag([], new SequenceRandom([0]))).toThrow(/empty/);
     });

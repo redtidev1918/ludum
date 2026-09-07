@@ -119,12 +119,18 @@ describe('WeightedSession', () => {
     });
 
     it('simulate does not pollute the real session (C1)', () => {
-        const session = createWeightedSession({ entries: [{ id: 'a', weight: 1 }] }, new SeededRandom(1), { historyLimit: 5 });
+        const config = { entries: [{ id: 'a', weight: 1 }, { id: 'b', weight: 1 }] };
+        const session = createWeightedSession(config, new SeededRandom(1), { historyLimit: 5 });
+        const control = createWeightedSession(config, new SeededRandom(1), { historyLimit: 5 });
         session.roll();
         session.roll();
+        control.roll();
+        control.roll();
         const before = session.serialize();
         session.simulate(100);
         expect(session.serialize()).toEqual(before);
+        expect(Array.from({ length: 8 }, () => session.roll()!.id))
+            .toEqual(Array.from({ length: 8 }, () => control.roll()!.id));
     });
 
     it('serialize/deserialize round-trips', () => {
@@ -153,5 +159,11 @@ describe('WeightedSession', () => {
         expect(() => createWeightedSession({ entries: [{ id: 'a', weight: 1 }] }, new SeededRandom(1), {
             historyLimit: -1,
         })).toThrow(/historyLimit/);
+    });
+
+    it('rejects malformed snapshot counters', () => {
+        const session = createWeightedSession({ entries: [{ id: 'a', weight: 1 }] }, new SeededRandom(1));
+        const snapshot = { ...session.serialize(), rollCount: -1 };
+        expect(() => session.deserialize(snapshot)).toThrow(/rollCount/);
     });
 });

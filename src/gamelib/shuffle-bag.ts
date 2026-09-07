@@ -48,6 +48,13 @@ export class ShuffleBag<T> {
 
     /** Restore remaining items (no refill). Items must be a subset of the original set. */
     restore(remaining: readonly T[]): void {
+        const available = new Map<T, number>();
+        for (const item of this.items) available.set(item, (available.get(item) ?? 0) + 1);
+        for (const item of remaining) {
+            const count = available.get(item) ?? 0;
+            if (count === 0) throw new Error('ShuffleBag.restore: remaining items must be a subset of the original items');
+            available.set(item, count - 1);
+        }
         this.bag = [...remaining];
     }
 }

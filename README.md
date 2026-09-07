@@ -18,9 +18,14 @@ npm install ludum
 ```
 
 ```ts
-import { World, Resource, SeededRandom } from "ludum";
-import { World } from "ludum/ecs"; // 子路径导出，更好的 tree-shaking
+import { Resource } from "ludum/resource";
+
+const hp = new Resource({ id: "hp", value: 100, max: 100 });
+hp.subtract(25);
+console.log(hp.get()); // 75
 ```
+
+多个模块也可以从 `ludum` 根入口统一导入。
 
 ## 一键运行演示
 

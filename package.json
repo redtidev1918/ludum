@@ -4,6 +4,19 @@
   "version": "3.0.1",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/redtidev1918/ludum.git"
+  },
+  "homepage": "https://github.com/redtidev1918/ludum#readme",
+  "bugs": "https://github.com/redtidev1918/ludum/issues",
+  "keywords": [
+    "game-development",
+    "ecs",
+    "typescript",
+    "deterministic",
+    "gameplay"
+  ],
   "engines": {
     "node": ">=20.19.0"
   },

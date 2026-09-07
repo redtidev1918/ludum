@@ -1,6 +1,6 @@
 // tests/resource.test.ts — Resource v3 specification
 import { describe, it, expect } from 'vitest';
-import { Resource, DerivedResource, ResourceRegistry } from '../src/gamelib/resource';
+import { Resource, DerivedResource, ResourceRegistry, type ResourceSnapshotV1 } from '../src/gamelib/resource';
 
 describe('Resource — value/range', () => {
     it('defaults to value 0, min 0, max 100', () => {
@@ -147,6 +147,14 @@ describe('Resource — snapshot', () => {
         expect(restored.id).toBe('hp');
         expect(restored.get()).toBe(res.get());
         expect(restored.getEffectiveRegen()).toBe(15);
+    });
+
+    it('rejects malformed snapshot values', () => {
+        const snapshot = {
+            ...new Resource({ id: 'hp', value: 75 }).serialize(),
+            value: 'bad',
+        } as unknown as ResourceSnapshotV1;
+        expect(() => Resource.deserialize(snapshot)).toThrow(/finite/);
     });
 });
 

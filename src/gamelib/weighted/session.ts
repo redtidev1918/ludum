@@ -4,7 +4,7 @@
  * Statistics are independent of history length, and `simulate()` runs on a
  * separate state so it never pollutes the real session.
  */
-import type { RandomSource } from '../runtime/random.js';
+import type { RandomSource, StatefulRandomSource } from '../runtime/random.js';
 import { WeightedTable, WeightedTableConfig, WeightedEntry, effectiveWeight, selectWeighted } from './table.js';
 
 export interface PityConfig {
@@ -80,9 +80,16 @@ export class WeightedSession {
         }
         const simState = newSessionState();
         const results: Record<string, number> = {};
-        for (let i = 0; i < count; i++) {
-            const entry = this.performRoll(simState, context, filter);
-            if (entry) results[entry.id] = (results[entry.id] ?? 0) + 1;
+        const stateful = this.random as Partial<StatefulRandomSource>;
+        const canRestore = typeof stateful.snapshot === 'function' && typeof stateful.restore === 'function';
+        const randomState = canRestore ? stateful.snapshot!() : undefined;
+        try {
+            for (let i = 0; i < count; i++) {
+                const entry = this.performRoll(simState, context, filter);
+                if (entry) results[entry.id] = (results[entry.id] ?? 0) + 1;
+            }
+        } finally {
+            if (canRestore) stateful.restore!(randomState);
         }
         return results;
     }
@@ -136,12 +143,28 @@ export class WeightedSession {
         if (snapshot.schemaVersion !== 1) {
             throw new Error(`WeightedSession.deserialize: unsupported schemaVersion ${snapshot.schemaVersion}`);
         }
+        const rollCount = validateCount(snapshot.rollCount, 'rollCount');
+        const totalTriggers = validateCount(snapshot.totalTriggers, 'totalTriggers');
+        const consecutiveWithoutGuarantee = validateCount(snapshot.consecutiveWithoutGuarantee, 'consecutiveWithoutGuarantee');
+        const perEntry = new Map<string, EntryStats>();
+        for (const [id, stats] of Object.entries(snapshot.perEntry ?? {})) {
+            perEntry.set(id, {
+                count: validateCount(stats.count, `perEntry.${id}.count`),
+                lastRoll: validateCount(stats.lastRoll, `perEntry.${id}.lastRoll`),
+            });
+        }
+        const history = (snapshot.history ?? []).map((entry, index) => {
+            if (typeof entry.id !== 'string') {
+                throw new Error(`WeightedSession.deserialize: history.${index}.id must be a string`);
+            }
+            return { id: entry.id, roll: validateCount(entry.roll, `history.${index}.roll`) };
+        });
         this.state = {
-            rollCount: snapshot.rollCount ?? 0,
-            totalTriggers: snapshot.totalTriggers ?? 0,
-            consecutiveWithoutGuarantee: snapshot.consecutiveWithoutGuarantee ?? 0,
-            perEntry: new Map(Object.entries(snapshot.perEntry ?? {}).map(([id, s]) => [id, { ...s }])),
-            history: (snapshot.history ?? []).map((h) => ({ ...h })),
+            rollCount,
+            totalTriggers,
+            consecutiveWithoutGuarantee,
+            perEntry,
+            history,
         };
     }
 
@@ -196,6 +219,13 @@ function newSessionState(): SessionState {
         perEntry: new Map(),
         history: [],
     };
+}
+
+function validateCount(value: number, name: string): number {
+    if (!Number.isSafeInteger(value) || value < 0) {
+        throw new Error(`WeightedSession.deserialize: ${name} must be a non-negative safe integer, got ${value}`);
+    }
+    return value;
 }
 
 /** Convenience factory: build a table and a session in one step. */

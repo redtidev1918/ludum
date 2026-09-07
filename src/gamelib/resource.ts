@@ -153,7 +153,7 @@ export class Resource implements ValueSource<number> {
 
     reset(initialValue?: number): this {
         this.modifiers.clear();
-        this._value = clamp(initialValue ?? this._max, this._min, this._max);
+        this._value = clamp(validateFinite(initialValue ?? this._max, 'value'), this._min, this._max);
         return this;
     }
 
@@ -163,6 +163,9 @@ export class Resource implements ValueSource<number> {
     addModifier(modifier: ResourceModifier): this {
         if (typeof modifier.id !== 'string' || modifier.id.trim().length === 0) {
             throw new Error('Resource.addModifier: modifier.id must be a non-empty string');
+        }
+        if (modifier.kind !== 'regen' && modifier.kind !== 'decay') {
+            throw new Error(`Resource.addModifier: modifier "${modifier.id}" has invalid kind ${modifier.kind}`);
         }
         if (modifier.amountPerSecond == null || !Number.isFinite(modifier.amountPerSecond)) {
             throw new Error(`Resource.addModifier: modifier "${modifier.id}" has invalid amountPerSecond ${modifier.amountPerSecond}`);
@@ -266,14 +269,22 @@ export class Resource implements ValueSource<number> {
         }
         const resource = new Resource({
             id: snapshot.id,
+            value: snapshot.value,
             min: snapshot.min,
             max: snapshot.max,
             regenPerSecond: snapshot.regenPerSecond,
             decayPerSecond: snapshot.decayPerSecond,
         });
-        resource._value = clamp(snapshot.value, snapshot.min, snapshot.max);
         for (const m of snapshot.modifiers ?? []) {
-            resource.modifiers.set(m.id, { ...m });
+            if (resource.hasModifier(m.id)) {
+                throw new Error(`Resource.deserialize: duplicate modifier id "${m.id}"`);
+            }
+            resource.addModifier(m);
+            const elapsedSeconds = validateFinite(m.elapsedSeconds, `modifier "${m.id}" elapsedSeconds`);
+            if (elapsedSeconds < 0) {
+                throw new Error(`Resource.deserialize: modifier "${m.id}" has invalid elapsedSeconds ${elapsedSeconds}`);
+            }
+            resource.modifiers.get(m.id)!.elapsedSeconds = elapsedSeconds;
         }
         return resource;
     }

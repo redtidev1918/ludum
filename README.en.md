@@ -19,9 +19,14 @@ npm install ludum
 ```
 
 ```ts
-import { World, Resource, SeededRandom } from "ludum";
-import { World } from "ludum/ecs"; // subpath export, better tree-shaking
+import { Resource } from "ludum/resource";
+
+const hp = new Resource({ id: "hp", value: 100, max: 100 });
+hp.subtract(25);
+console.log(hp.get()); // 75
 ```
+
+You can also import multiple modules from the `ludum` root entry point.
 
 ## Run the demo (one command)
 
