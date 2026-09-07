@@ -53,7 +53,7 @@ npm start
 
 **示例 (Examples)** —— 库的消费方：
 Phaser 4 演示（`examples/phaser/`）· Cocos Creator 参考（`examples/cocos/`）·
-headless 切片（`examples/headless/`）。
+headless 切片（`examples/headless/`）· 卡牌工艺切片（`examples/card-crafting/`）。
 
 ## 设计原则
 
@@ -75,6 +75,7 @@ headless 切片（`examples/headless/`）。
 | `npm run build:lib` | 构建库（ESM + `.d.ts`）到 `dist/` |
 | `npm run bench` | 运行轻量基准测试（回归守卫） |
 | `npm run example:headless` | 运行确定性 headless 垂直切片 |
+| `npm run example:craft` | 运行卡牌工艺切片（配方/门槛/倒计时/衰败/胜负，含确定性与快照自检） |
 | `npm run test:ecs` / `test:resource` / `test:dialogue` / `test:weighted` / `test:state` / `test:geometry` / `test:runtime` / `test:rules` | 按子系统定向测试 |
 | `npm run dev` | 运行 Phaser 4 演示（仅开发） |
 
@@ -92,6 +93,7 @@ src/gamelib/          # 库核心（引擎无关，零运行时依赖）
 types/host.d.ts       # 核心允许的最小宿主全局（console）
 spec/                 # 可移植、语言无关的行为规范（conventions.md）
 examples/headless/    # 确定性 headless 垂直切片
+examples/card-crafting/  # 卡牌工艺切片：ECS 卡 + 配方 + Countdown + WeightedTable
 examples/phaser/      # Phaser 4 示例（仅开发）
 examples/cocos/       # Cocos Creator 集成参考（类型层）
 tests/                # Vitest 单元 + 集成测试

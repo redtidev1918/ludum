@@ -69,6 +69,7 @@
     "test": "vitest run",
     "bench": "vitest bench",
     "example:headless": "tsx examples/headless/main.ts",
+    "example:craft": "tsx examples/card-crafting/main.ts",
     "test:watch": "vitest",
     "test:ecs": "vitest run tests/ecs.test.ts",
     "test:resource": "vitest run tests/resource.test.ts",

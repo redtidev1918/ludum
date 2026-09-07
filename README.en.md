@@ -52,7 +52,8 @@ The library is organized into four layers. Breaking changes from v1 are in
 
 **Examples** — consumers of the library:
 Phaser 4 demo (`examples/phaser/`) · Cocos Creator reference
-(`examples/cocos/`) · headless slice (`examples/headless/`).
+(`examples/cocos/`) · headless slice (`examples/headless/`) ·
+card-crafting slice (`examples/card-crafting/`).
 
 ## Design principles
 
@@ -76,6 +77,7 @@ Phaser 4 demo (`examples/phaser/`) · Cocos Creator reference
 | `npm run build:lib` | build the library (ESM + `.d.ts`) into `dist/` |
 | `npm run bench` | run the lightweight benchmark (regression guard) |
 | `npm run example:headless` | run the deterministic headless vertical slice |
+| `npm run example:craft` | run the card-crafting slice (recipes/gates/countdowns/decay/win-lose with determinism + snapshot self-checks) |
 | `npm run test:ecs` / `test:resource` / `test:dialogue` / `test:weighted` / `test:state` / `test:geometry` / `test:runtime` / `test:rules` | targeted subsystem tests |
 | `npm run dev` | run the Phaser 4 demo (dev only) |
 
@@ -93,6 +95,7 @@ src/gamelib/          # the library core (engine-independent, zero runtime deps)
 types/host.d.ts       # minimal host globals (console) allowed in the core
 spec/                 # portable, language-agnostic behavior spec (conventions.md)
 examples/headless/    # deterministic headless vertical slice
+examples/card-crafting/  # card-crafting slice: ECS cards + recipes + Countdown + WeightedTable
 examples/phaser/      # Phaser 4 example (dev-only)
 examples/cocos/       # Cocos Creator integration reference (type-level)
 tests/                # Vitest unit + integration tests
