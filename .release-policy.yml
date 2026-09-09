@@ -1,0 +1,31 @@
+{
+  "kind": "node-library",
+  "versioning": {
+    "mode": "release-please"
+  },
+  "build": {
+    "test": "npm ci && npm run check",
+    "command": "npm ci && npm run build:lib"
+  },
+  "assets": {
+    "required": [],
+    "optional": []
+  },
+  "registries": {
+    "github": {
+      "required": true
+    },
+    "npm": {
+      "required": true,
+      "publish": "npm view ludum@$RELEASE_VERSION version | grep -Fx $RELEASE_VERSION || npm publish --access public",
+      "verify": "npm view ludum@$RELEASE_VERSION version | grep -Fx $RELEASE_VERSION"
+    }
+  },
+  "retention": {
+    "stable": 1,
+    "prerelease": 1,
+    "failed_draft": 2
+  },
+  "checksums": false,
+  "sbom": false
+}
