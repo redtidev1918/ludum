@@ -2,6 +2,13 @@
 
 > English: [CHANGELOG.en.md](./CHANGELOG.en.md)
 
+## [3.0.3](https://github.com/redtidev1918/ludum/compare/v3.0.2...v3.0.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* **ci:** follow releasegraph rename ([3fbedd2](https://github.com/redtidev1918/ludum/commit/3fbedd25571d4af3a9f74a0411dcf64f9e5d575a))
+
 ## [3.0.2](https://github.com/redtidev1918/ludum/compare/v3.0.1...v3.0.2) (2026-09-09)
 
 
