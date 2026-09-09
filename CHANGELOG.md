@@ -2,6 +2,14 @@
 
 > English: [CHANGELOG.en.md](./CHANGELOG.en.md)
 
+## [3.0.2](https://github.com/redtidev1918/ludum/compare/v3.0.1...v3.0.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* harden runtime state handling ([3b13b33](https://github.com/redtidev1918/ludum/commit/3b13b334a5cb9ee9b700de5909001ec77c2da264))
+* one-click demo actually opens the browser (npm start --open) ([50bdf92](https://github.com/redtidev1918/ludum/commit/50bdf92a524af1e3693677ac5d3991a647090390))
+
 ## 3.0.1
 
 - 文档中文化（README / CHANGELOG / PORTABILITY / ARCHITECTURE_MAP / cocos README），并补充英文版 `*.en.md`。
