@@ -1,5 +1,7 @@
 # EventBus —— 已移除（v3）
 
+**语言 / Language:** 中文 · [English](/docs/en/EVENT_BUS.md)
+
 v1 的 stringly-typed `EventBus`（`on(event: string, cb: (...args: any[]) => void)`）已在 v3 移除。
 
 替代方案：类型化、实例局部的 `Signal<T>`（见 `src/gamelib/signal.ts`）。

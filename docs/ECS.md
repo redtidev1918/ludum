@@ -1,5 +1,7 @@
 # ECS（实体组件系统）
 
+**语言 / Language:** 中文 · [English](/docs/en/ECS.md)
+
 ludum 3.0 的 ECS 是**实例化、类型安全**的实体组件系统。v1 的模块级单例（`ECS.xxx`）已被删除。
 
 ## 核心概念

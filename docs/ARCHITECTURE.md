@@ -1,5 +1,7 @@
 # ludum — Architecture
 
+**语言 / Language:** 中文 · [English](/docs/en/ARCHITECTURE.md)
+
 ludum 是一个 portable、headless、deterministic、typed、composable、data-driven 的
 TypeScript gameplay kernel + gameplay systems。**不是** game engine / renderer / scene
 framework。

@@ -6,32 +6,41 @@
 > systems — ECS, resources and attributes, modifiers, state machines, dialogue, weighted random
 > selection, pity systems, gameplay conditions, geometry and interaction hit testing.
 
+The English documentation is **complete and page-for-page mirrored** with the Chinese section
+under `/docs/`.
+
 ## Entry points
 
 | Document | Content |
 | :-- | :-- |
 | [📥 Download](download.md) | npm install and release metadata, auto-updated on every release |
 | [README (English)](/README.en.md) | Overview, install, module map and examples |
-| [Architecture map](ARCHITECTURE_MAP.md) | How the modules fit together |
-| [Portability](PORTABILITY.md) | Language-agnostic portability strategy |
 
-## Chinese documentation (default)
-
-The module-level guides, the ADR set and the migration guide are written in Chinese and live
-under `/docs/`. Start from the [Chinese overview](/README.md), or use the sidebar.
+## Core modules
 
 | Document | Content |
 | :-- | :-- |
-| [ECS](/docs/ECS.md) · [资源系统](/docs/RESOURCE.md) · [状态机](/docs/STATE.md) | Core modules |
-| [对话系统](/docs/DIALOGUE.md) · [加权事件](/docs/WEIGHTED_EVENT.md) | Dialogue and weighted events |
-| [几何](/docs/GEOMETRY.md) · [交互](/docs/INTERACTION.md) · [事件总线](/docs/EVENT_BUS.md) | Geometry, interaction, signals |
-| [架构说明](/docs/ARCHITECTURE.md) · [架构地图](/docs/ARCHITECTURE_MAP.md) · [移植性](/docs/PORTABILITY.md) | Architecture and portability |
-| [ADR 索引](/docs/adr/README.md) | Architecture decision records (Chinese index, English records) |
-| [从 v2 迁移到 v3](/docs/migration-v3.md) | Migration guide |
+| [ECS](ECS.md) | Instance-based, type-safe entity component system |
+| [Resource](RESOURCE.md) | Numeric resources with range and modifier semantics |
+| [State](STATE.md) | `StateMachine<TContext>` plus `VisualStateMap` |
+| [Dialogue](DIALOGUE.md) | Data-driven branching dialogue |
+| [Weighted](WEIGHTED_EVENT.md) | Weighted random selection with pity |
+| [Geometry](GEOMETRY.md) | Typed `Shape2D`, pure hit testing, springs, procedural shapes |
+| [Interaction](INTERACTION.md) | Regions and pointer routing with typed events |
+| [EventBus (removed)](EVENT_BUS.md) | Why the stringly-typed bus was replaced by `Signal<T>` |
 
-> Note on the ADRs: the index is Chinese while the records themselves are English. ADRs are
-> immutable decision records and are conventionally written in English, so they are kept as-is
-> rather than mirrored.
+## Architecture
+
+| Document | Content |
+| :-- | :-- |
+| [Architecture](ARCHITECTURE.md) | Layer model and core principles |
+| [Architecture map](ARCHITECTURE_MAP.md) | How the modules fit together |
+| [Portability](PORTABILITY.md) | Language-agnostic portability strategy |
+| [Migration to v3](migration-v3.md) | Every breaking change from v1 |
+
+> Note on the ADRs (`/docs/adr/`): the index is Chinese while the records themselves are English.
+> ADRs are immutable decision records and are conventionally written in English, so they are kept
+> as-is rather than mirrored.
 
 ## Links
 
