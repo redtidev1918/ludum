@@ -1,5 +1,7 @@
 # Resource —— 数值资源
 
+**语言 / Language:** 中文 · [English](/docs/en/RESOURCE.md)
+
 ludum v3 的 Resource 只服务于「可变的数值游戏值 + 值域/范围语义」(HP / MP / 体力 / 热量 / 士气)。v1 的 `ResourceManager` / `onChange` / `getModifiers` 已删除或改名。
 
 ## 核心概念

@@ -1,5 +1,7 @@
 # Migration v3
 
+**语言 / Language:** 中文 · [English](/docs/en/migration-v3.md)
+
 ludum v3 是一次**不向后兼容**的重构：从「Lua/TS 移植(v1)」重写为「小型、可组合、引擎无关、确定性、Agent-friendly 的 gameplay systems toolkit」。
 
 ## 全局

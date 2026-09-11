@@ -1,5 +1,7 @@
 # Weighted —— 加权随机选择
 
+**语言 / Language:** 中文 · [English](/docs/en/WEIGHTED_EVENT.md)
+
 ludum v3 的加权选择系统。v1 的 `WeightedEventPool` / `newPool` 已删除。
 
 ## 核心概念

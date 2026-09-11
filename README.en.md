@@ -1,6 +1,6 @@
 # ludum
 
-English · [中文](./README.md)
+**Language / 语言:** [中文](README.md) · English
 
 > A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.
 
