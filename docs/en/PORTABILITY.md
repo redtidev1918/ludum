@@ -1,5 +1,7 @@
 # Portability
 
+**Language / 语言:** [中文](/docs/PORTABILITY.md) · English
+
 > 中文：[PORTABILITY.md](./PORTABILITY.md)
 
 ludum is portable at three levels.

@@ -1,5 +1,7 @@
 # Architecture Map
 
+**Language / 语言:** [中文](/docs/ARCHITECTURE_MAP.md) · English
+
 > 中文：[ARCHITECTURE_MAP.md](./ARCHITECTURE_MAP.md)
 
 Module → allowed dependencies. Lower layers never import upper layers.
