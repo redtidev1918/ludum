@@ -1,7 +1,7 @@
 - 开始使用
   - [中文概览](/README.md)
   - [📥 下载](/docs/download.md)
-  - [从 v2 迁移到 v3](/docs/migration-v3.md)
+  - [从 v1 迁移到 v3](/docs/migration-v3.md)
 - 核心模块
   - [ECS](/docs/ECS.md)
   - [资源系统](/docs/RESOURCE.md)

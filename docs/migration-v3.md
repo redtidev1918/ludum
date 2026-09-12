@@ -1,4 +1,4 @@
-# Migration v3
+# 从 v1 迁移到 v3
 
 **语言 / Language:** 中文 · [English](/docs/en/migration-v3.md)
 
