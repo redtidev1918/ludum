@@ -1,4 +1,6 @@
 {
+  "name": "ludum",
+  "emoji": "🎲",
   "navigation": {
     "allowSidebarAnchors": true,
     "allowCombinedLocales": true
