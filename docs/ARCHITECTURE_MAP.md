@@ -1,6 +1,6 @@
 # 架构图 (Architecture Map)
 
-> **语言 / Language:** 中文 · [English](/en/ARCHITECTURE_MAP.md)
+> **语言 / Language:** 中文 · [English](/docs/en/ARCHITECTURE_MAP.md)
 
 模块 → 允许的依赖。下层绝不 import 上层。
 

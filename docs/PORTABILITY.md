@@ -1,6 +1,6 @@
 # 可移植性 (Portability)
 
-> **语言 / Language:** 中文 · [English](/en/PORTABILITY.md)
+> **语言 / Language:** 中文 · [English](/docs/en/PORTABILITY.md)
 
 ludum 在三个层次上是可移植的。
 
