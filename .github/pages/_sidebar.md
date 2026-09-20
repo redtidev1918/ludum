@@ -15,7 +15,6 @@
   - [架构说明](/docs/ARCHITECTURE.md)
   - [架构地图](/docs/ARCHITECTURE_MAP.md)
   - [移植性](/docs/PORTABILITY.md)
-- 架构决策
   - [ADR 索引](/docs/adr/README.md)
 - 示例
   - [Cocos Creator](/examples/cocos/README.md)
