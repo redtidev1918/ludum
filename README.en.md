@@ -123,3 +123,19 @@ typecheck. See `docs/adr/0001-engine-independent-core.md`.
 ## License
 
 [MIT](LICENSE) — Copyright (c) 2026 ludum Team.
+
+## Documentation
+
+This README covers the basics; module details, ADRs, and migration notes live at
+<https://redtidev1918.github.io/ludum/>:
+
+| What you want | Where |
+| --- | --- |
+| A specific module (ECS, state machines, dialogue, weighted random, …) | [Docs site](https://redtidev1918.github.io/ludum/) |
+| Architecture decisions | [ADR index](docs/adr/README.md) |
+| Migrating from an older version | [Migration to v3](docs/migration-v3.md) |
+
+## Acknowledgements
+
+ludum's core is pure TypeScript with zero runtime dependencies; `phaser`, `vite`, `vitest`, and
+`tsx` only appear in examples, builds, and tests and never ship in the output.

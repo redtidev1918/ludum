@@ -121,3 +121,18 @@ AGENTS.md             # 面向 agent 的仓库操作契约
 ## License
 
 [MIT](LICENSE) — Copyright (c) 2026 ludum Team.
+
+## 文档
+
+README 只讲怎么上手；模块细节、ADR 与迁移说明在文档站 <https://redtidev1918.github.io/ludum/>：
+
+| 你想做什么 | 文档 |
+| --- | --- |
+| 看某个模块（ECS、状态机、对话、加权随机…） | [文档站](https://redtidev1918.github.io/ludum/) |
+| 读架构决策 | [ADR 目录](docs/adr/README.md) |
+| 从旧版本迁移 | [迁移到 v3](docs/migration-v3.md) |
+
+## 致谢
+
+ludum 的核心是零运行时依赖的纯 TypeScript；`phaser`、`vite`、`vitest`、`tsx` 只出现在
+示例、构建与测试里，不进产物。
