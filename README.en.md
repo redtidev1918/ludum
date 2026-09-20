@@ -1,6 +1,7 @@
 # ludum
 
 **Language / 语言:** [中文](README.md) · English
+[![Docs](https://img.shields.io/badge/Docs-documentation-6366f1?style=flat-square)](https://redtidev1918.github.io/ludum/)
 
 > A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.
 
