@@ -2,10 +2,11 @@
 
 **语言 / Language:** 中文 · [English](README.en.md)
 
-📖 完整文档：<https://redtidev1918.github.io/ludum/>
-[![Docs](https://img.shields.io/badge/Docs-文档站点-6366f1?style=flat-square)](https://redtidev1918.github.io/ludum/)
+**一个小型、引擎无关、强类型的 TypeScript 工具库，用于可复用的 gameplay 系统。**
 
-> 一个小型、引擎无关、强类型的 TypeScript 工具库，用于可复用的 gameplay 系统。
+📖 [完整文档](https://redtidev1918.github.io/ludum/)
+
+[![Docs](https://img.shields.io/badge/Docs-文档站点-6366f1?style=flat-square)](https://redtidev1918.github.io/ludum/)
 
 ludum 提供可组合的玩法逻辑构建块 —— ECS、资源与属性、修饰符、状态机、对话、加权
 随机选择、保底(pity)系统、玩法条件、几何、以及交互命中检测 —— 可在任意 JS/TS 宿主
@@ -124,7 +125,7 @@ AGENTS.md             # 面向 agent 的仓库操作契约
 
 ## 文档
 
-README 只讲怎么上手；模块细节、ADR 与迁移说明在文档站 <https://redtidev1918.github.io/ludum/>：
+README 只讲怎么上手；模块细节、ADR 与迁移说明在[文档站](https://redtidev1918.github.io/ludum/)：
 
 | 你想做什么 | 文档 |
 | --- | --- |

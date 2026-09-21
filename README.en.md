@@ -2,10 +2,11 @@
 
 **Language / 语言:** [中文](README.md) · English
 
-📖 Full documentation: <https://redtidev1918.github.io/ludum/>
-[![Docs](https://img.shields.io/badge/Docs-documentation-6366f1?style=flat-square)](https://redtidev1918.github.io/ludum/)
+**A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.**
 
-> A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.
+📖 [Full documentation](https://redtidev1918.github.io/ludum/)
+
+[![Docs](https://img.shields.io/badge/Docs-documentation-6366f1?style=flat-square)](https://redtidev1918.github.io/ludum/)
 
 ludum provides composable building blocks for gameplay logic — ECS, resources &
 attributes, modifiers, state machines, dialogue, weighted random selection, pity
@@ -126,8 +127,8 @@ typecheck. See `docs/adr/0001-engine-independent-core.md`.
 
 ## Documentation
 
-This README covers the basics; module details, ADRs, and migration notes live at
-<https://redtidev1918.github.io/ludum/>:
+This README covers the basics; module details, ADRs, and migration notes live at the
+[docs site](https://redtidev1918.github.io/ludum/):
 
 | What you want | Where |
 | --- | --- |
