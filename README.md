@@ -4,7 +4,7 @@
 
 > **一个小型、引擎无关、强类型的 TypeScript 工具库，用于可复用的 gameplay 系统。**
 
-📖 [完整文档](https://redtidev1918.github.io/ludum/)
+[完整文档](https://redtidev1918.github.io/ludum/)
 
 [![Docs](https://img.shields.io/badge/Docs-文档站点-6366f1?style=flat-square)](https://redtidev1918.github.io/ludum/)
 
@@ -113,7 +113,7 @@ tsconfig.{base,lib,test,example,build}.json  # 拆分 TypeScript 配置
 AGENTS.md             # 面向 agent 的仓库操作契约
 ```
 
-## 引擎无关是被强制执行的，不只是文档声明
+## 引擎无关在 typecheck 里强制执行
 
 核心只针对 `lib: ["ES2022"]` 编译（`tsconfig.lib.json`）。在核心中使用 `window`、
 `document`、`process`、`HTMLElement` 或 `Phaser` 会导致 typecheck 失败。见
