@@ -2,7 +2,7 @@
 
 **Language / 语言:** [中文](README.md) · English
 
-**A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.**
+> **A small, engine-agnostic, strongly-typed TypeScript toolkit for reusable gameplay systems.**
 
 📖 [Full documentation](https://redtidev1918.github.io/ludum/)
 
