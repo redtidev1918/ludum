@@ -14,3 +14,4 @@
 - [0010：无头运行优先](0010-headless-first.md)
 - [0011：快照约定](0011-snapshot-conventions.md)
 - [0012：可移植性策略](0012-portability-strategy.md)
+- [0013：并行叙事脚手架](0013-parallel-narrative-scaffolding.md)

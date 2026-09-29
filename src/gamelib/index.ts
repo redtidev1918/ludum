@@ -11,6 +11,8 @@
 //   dialogue.ts       - DialogueDefinition / DialogueSession / selectLine 对话
 //   weighted/         - WeightedTable / selectWeighted / WeightedSession 加权随机选择
 //   shuffle-bag.ts    - ShuffleBag 无放回随机抽取
+//   aspect.ts         - Aspects 标签+等级数值模型(聚合/门槛/增量)
+//   narrative/        - Situation + Heartbeat 并行叙事脚手架
 //   runtime/          - Clock / RandomSource / IdGenerator / ValueSource 运行时能力
 //   predicate.ts      - Predicate<T> 纯谓词
 //   signal.ts         - Signal<T> 类型化局部事件
@@ -23,6 +25,9 @@ export * from './dialogue.js';
 export * from './weighted/table.js';
 export * from './weighted/session.js';
 export * from './shuffle-bag.js';
+export * from './deck.js';
+export * from './aspect.js';
+export * from './narrative/situation.js';
 export * from './state-machine.js';
 export * from './visual-state.js';
 export * from './geometry/shape.js';
