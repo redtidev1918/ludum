@@ -31,6 +31,15 @@ console.log(hp.get()); // 75
 
 多个模块也可以从 `ludum` 根入口统一导入。
 
+新增的卡牌工艺三件套也一样有独立子路径或根导出:
+```ts
+import { Situation, Heartbeat } from "ludum/narrative"; // 并行叙事
+import { satisfiesAspects, combineAspects, totalAspects } from "ludum/aspect"; // 相性字典
+import { createDeck, type DeckInstance, type DeckSpec } from "ludum/deck"; // 抽牌
+```
+> 注意:完整类型与实现随包分发(`dist/`)。npm 3.1.0 曾发布过缺 `dist/` 的
+> 不完整包;3.1.1 起已修复,始终 `npm install ludum` 拉最新即可。
+
 ## 一键运行演示
 
 克隆后一条命令即可跑起 Phaser 4 演示（首次自动装依赖、自动打开浏览器，Windows / macOS / Linux 通用）：
