@@ -17,7 +17,7 @@
     },
     "npm": {
       "required": true,
-      "publish": "npm view ludum@$RELEASE_VERSION version | grep -Fx $RELEASE_VERSION || npm publish --access public",
+      "publish": "(npm view ludum@$RELEASE_VERSION version | grep -Fx -q $RELEASE_VERSION) || (npm ci && npm run build:lib && npm publish --access public)",
       "verify": "npm view ludum@$RELEASE_VERSION version | grep -Fx $RELEASE_VERSION"
     }
   },

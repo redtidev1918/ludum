@@ -63,6 +63,18 @@
       "types": "./dist/shuffle-bag.d.ts",
       "import": "./dist/shuffle-bag.js"
     },
+    "./aspect": {
+      "types": "./dist/aspect.d.ts",
+      "import": "./dist/aspect.js"
+    },
+    "./deck": {
+      "types": "./dist/deck.d.ts",
+      "import": "./dist/deck.js"
+    },
+    "./narrative": {
+      "types": "./dist/narrative/situation.d.ts",
+      "import": "./dist/narrative/situation.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
