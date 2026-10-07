@@ -1,5 +1,5 @@
 // bench/core.bench.ts — lightweight regression benchmarks. Run with: npm run bench
-import { bench, describe } from 'vitest';
+import { test, describe } from 'vitest';
 import { World, defineComponent } from '../src/gamelib/ecs';
 import { Resource } from '../src/gamelib/resource';
 import { createWeightedSession } from '../src/gamelib/weighted/session';
@@ -23,30 +23,30 @@ describe('benchmark', () => {
     });
     for (let i = 0; i < 1000; i++) world.createEntity().add(Position).add(Velocity);
 
-    bench('ECS update over 1000 entities', () => {
-        world.update(1 / 60);
+    test('ECS update over 1000 entities', async ({ bench }) => {
+        await bench('ECS update over 1000 entities', () => world.update(1 / 60)).run();
     });
 
     const hp = new Resource({ id: 'hp', value: 100, max: 100, regenPerSecond: 2 });
-    bench('Resource update', () => {
-        hp.update(1 / 60);
+    test('Resource update', async ({ bench }) => {
+        await bench('Resource update', () => hp.update(1 / 60)).run();
     });
 
     const session = createWeightedSession(
         { entries: [{ id: 'a', weight: 1 }, { id: 'b', weight: 2 }, { id: 'c', weight: 3 }] },
         new SeededRandom(42),
     );
-    bench('Weighted selection', () => {
-        session.roll();
+    test('Weighted selection', async ({ bench }) => {
+        await bench('Weighted selection', () => session.roll()).run();
     });
 
     const shape = new ProceduralShape({ kind: 'ellipse', baseWidth: 100, baseHeight: 50, sides: 64 });
-    bench('Procedural shape generation (64 points)', () => {
-        shape.generate();
+    test('Procedural shape generation (64 points)', async ({ bench }) => {
+        await bench('Procedural shape generation (64 points)', () => shape.generate()).run();
     });
 
     const circle: Shape2D = { kind: 'circle', center: { x: 0, y: 0 }, radius: 50 };
-    bench('Hit testing (circle)', () => {
-        containsPoint(circle, { x: 25, y: 25 });
+    test('Hit testing (circle)', async ({ bench }) => {
+        await bench('Hit testing (circle)', () => containsPoint(circle, { x: 25, y: 25 })).run();
     });
 });
