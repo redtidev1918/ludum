@@ -2,6 +2,18 @@
 
 > English: [CHANGELOG.en.md](./CHANGELOG.en.md)
 
+## [3.1.2](https://github.com/redtidev1918/ludum/compare/v3.1.1...v3.1.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* **test:** migrate benchmarks to Vitest 5 fixtures ([a286459](https://github.com/redtidev1918/ludum/commit/a2864599815bc09012d8d3d13bab6adf8681596d))
+
+
+### Reverts
+
+* remove one-off deprecate workflow (done, 3.1.0 deprecated) ([9c4ad07](https://github.com/redtidev1918/ludum/commit/9c4ad077bf950d4c1c7cc4f8847439adf1a82c6e))
+
 ## [3.1.1](https://github.com/redtidev1918/ludum/compare/v3.1.0...v3.1.1) (2026-09-30)
 
 
