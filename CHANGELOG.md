@@ -2,6 +2,20 @@
 
 > English: [CHANGELOG.en.md](./CHANGELOG.en.md)
 
+## [3.1.1](https://github.com/redtidev1918/ludum/compare/v3.1.0...v3.1.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* **release:** build npm tarball before publish (dist was empty on npm) ([8ddf321](https://github.com/redtidev1918/ludum/commit/8ddf32167fddf40144ebbd1a8b39f19d2b2bd30a))
+
+## [3.1.0](https://github.com/redtidev1918/ludum/compare/v3.0.3...v3.1.0) (2026-09-29)
+
+
+### Features
+
+* **arch:** add parallel narrative scaffolding (Situation/Heartbeat, Aspects, Deck) ([e50d1dc](https://github.com/redtidev1918/ludum/commit/e50d1dcb75400276dff7d579a50927aa594ed1c1))
+
 ## [3.0.3](https://github.com/redtidev1918/ludum/compare/v3.0.2...v3.0.3) (2026-09-09)
 
 
